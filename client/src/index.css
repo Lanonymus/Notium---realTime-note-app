@@ -1,0 +1,80 @@
+
+@import "tailwindcss";
+
+
+body {
+    font-family: var(--font-Roboto);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+
+:root {
+  --font-Roboto: "Roboto";
+  --font-Montserrat: "Montserrat";
+  --font-Inter: "Inter";
+  --font-NotoSansKorean: "Noto Sans Korean";
+  --font-Ubuntu: "Ubuntu";
+  --font-Quicksand: "Quicksand";
+  --font-Manrope: "Manrope";
+  --font-ComicNeue: "Comic Neue";
+}
+
+@theme {
+  --font-Roboto: "Roboto";
+  --font-Montserrat: "Montserrat";
+  --font-Inter: "Inter";
+  --font-NotoSansKorean: "Noto Sans Korean";
+  --font-Ubuntu: "Ubuntu";
+  --font-Quicksand: "Quicksand";
+  --font-Manrope: "Manrope";
+  --font-ComicNeue: "Comic Neue";
+
+}
+
+
+@layer components {
+    .toolTip {
+        @apply bg-gray-100 px-2 py-1 border-1 border-gray-300 absolute
+        top-[46px] left-[50%] translate-x-[-50%] rounded-[3px] p-1 opacity-0 text-gray-500
+        group-hover:opacity-100 duration-150 pointer-events-none
+    }
+}
+
+.scrollable-fonts::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollable-fonts::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.scrollable-fonts::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 4px;
+}
+
+.scrollable-fonts::-webkit-scrollbar-thumb:hover {
+  background: #979797;
+}
+
+
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #dfdfdf;
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d1d1d1;
+}
