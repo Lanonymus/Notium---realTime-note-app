@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",                          /* Nowoczesny JavaScript */
+    "module": "NodeNext",                        /* Obsługa import/export (ESM) w Node */
+    "moduleResolution": "NodeNext",
+    "rootDir": "./src",                          /* Gdzie trzymasz pliki .ts */
+    "outDir": "./dist",                          /* Gdzie TS ma wyrzucać skompilowany kod .js */
+    "esModuleInterop": true,                     /* Lepsza kompatybilność z paczkami JS */
+    "forceConsistentCasingInFileNames": true,    /* Pilnowanie wielkości liter w nazwach plików */
+    "strict": true,                              /* Włączenie rygorystycznego sprawdzania typów */
+    "skipLibCheck": true                         /* Przyspiesza kompilację */
+  },
+  "include": ["src/**/*"]                        /* Kompiluj wszystko w folderze src */
+}
