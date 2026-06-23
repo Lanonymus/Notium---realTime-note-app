@@ -5,6 +5,8 @@ import initWebSocket from './ws/ws.js'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import projectRouter from './routes/project.js'
+import { httpArcjetMiddleware } from './arcjet.js'
+
 
 dotenv.config()
 
@@ -14,13 +16,16 @@ const PORT = Number(process.env.PORT || 8000);
 const HOST = process.env.HOST || "0.0.0.0"
 
 
+// Dla stron hostingowych, które będą pośrednikami między Twoim serwerem a frontendem,
+
+app.set('trust proxy', true)
 
 // Pozwól na żądania z Twojego frontendu i tłumaczenie na JSON
-
 app.use(cors({
   origin: 'http://localhost:5173', // adres frontendu
   credentials: true,               // jeśli będziesz przesyłać ciasteczka
 }));
+app.use(httpArcjetMiddleware())    // limitujemy ilość żądań
 app.use(express.json());
 
 

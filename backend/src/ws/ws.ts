@@ -10,6 +10,8 @@ import dotenv from "dotenv"
 import { db } from '../db/db.js';
 import { project } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import { wsArcjet } from '../arcjet.js';
+import http from "http"
 
 dotenv.config()
 
@@ -20,6 +22,7 @@ export type Room = {
     chatMessages: any[],        
     editorContent: Record<string, any>,
     editorTitle: string,
+    isDirty?: boolean,
 }
 
 const rooms: Record<string, Room> = {};
@@ -27,7 +30,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "secret"; // w praktyce wrzucasz w 
 
 
 // Czyszczenie pokoji i użytkowników
-const handleDisconnect = (roomId: string, uuid: string) => {
+const handleDisconnect = async (roomId: string, uuid: string) => {
     const room = rooms[roomId]
 
     if(!room) return
@@ -42,6 +45,22 @@ const handleDisconnect = (roomId: string, uuid: string) => {
 
     if(Object.keys(room.connections).length === 0) {
         console.log(`Room ${roomId} is empty. Deleting room from memory`)
+
+        // Zapisywanie zmian gdy wszyscy użytkownicy wyjdą
+        const roomEditorContent = room.editorContent
+        try {
+            const [result] = await db
+               .update(project)
+                .set({ editorContent: roomEditorContent })
+                .where(eq(project.id, Number(roomId)))
+                .returning()
+
+            console.log("zaktualizowana zawartość: ", result);
+            if(!result) return console.error("Error while saving doc roomId: ", roomId)
+            
+        } catch (err) {
+            return console.error("Error while saving document content", err);             
+        }
         // TODO: Zapisywanie zmian w bazie NEON 
         delete rooms[roomId]
         return
@@ -56,7 +75,53 @@ const handleDisconnect = (roomId: string, uuid: string) => {
 
 // initiating webSocket server
 function initWebSocket(server: Server) {
-    const wss = new WebSocketServer({ server });
+    const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 * 5});
+
+    server.on("upgrade", async (req, socket, head) => {
+        console.log(req.headers.upgrade);
+        
+        if(req.headers.upgrade?.toLowerCase() !== "websocket"){
+            console.error("Invalid upgrade request")
+            socket.destroy()
+            return;
+        }
+
+        if(wsArcjet) {
+            try {
+                const decision = await wsArcjet.protect(req)
+                if(decision.isDenied()) {
+                    const isRateLimit = decision.reason.isRateLimit()
+                    const statusCode = isRateLimit ? 429 : 403
+                    const statusMessage = isRateLimit ? "Too many requests" : "Forbidden"
+
+                    // Tworzymy obiekt odpowiedzi
+                    const res = new http.ServerResponse(req)
+                    res.assignSocket(socket as any)
+
+                    // Czysty kod wiadomości zwrotnej
+                    res.writeHead(statusCode, {
+                        "Content-Type": "text/plain",
+                        "Connection": "close"
+                    })
+
+                    res.end(statusMessage)
+                    return
+
+                }
+            } catch (error) {
+                console.error("Error during WebSocket request protection:", error)
+                socket.destroy()
+                return;
+            }
+
+        }
+
+        wss.handleUpgrade(req, socket, head, (ws) => {
+            wss.emit("connection", ws, req)
+        })
+
+
+    })
 
     wss.on("connection", async (ws: WebSocket, req: any) => {
         const urlSearchParams = new URLSearchParams(req.url.split("?")[1])
@@ -156,7 +221,7 @@ function initWebSocket(server: Server) {
 
                     const handler = eventHandlers[data.type]
                     if (handler) {
-                        handler(ws, room, uuid, data)
+                        handler(ws, room, uuid, data, roomIdNumber)
                     } else {
                         console.warn(`Unknown event type: ${data.type}`)
                     }
@@ -180,6 +245,33 @@ function initWebSocket(server: Server) {
        
 })
 } 
+
+
+setInterval(async () => {
+    const activeRoomIds = Object.keys(rooms)
+    if(activeRoomIds.length === 0) return
+
+    // Jeżeli są aktywne pokoje
+    for(const roomId of activeRoomIds) {
+        const room = rooms[roomId]
+
+        if(room && room.isDirty) {
+            try {
+                await db
+                .update(project)
+                .set({ editorContent: room.editorContent})
+                .where(eq(project.id, Number(roomId)))
+                .returning()
+
+                room.isDirty = false
+                console.log(`💾 [Auto-Save] Pokój ID: ${roomId} pomyślnie zrzucony do bazy Neon.`);
+            } catch (error) {
+                console.error(`❌ [Auto-Save] Błąd zapisu pokoju ID: ${roomId}:`, error);
+            }
+        }
+    }
+     
+}, 30_000)
 
 
 export default initWebSocket
