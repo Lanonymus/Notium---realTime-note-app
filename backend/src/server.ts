@@ -18,7 +18,7 @@ const HOST = process.env.HOST || "0.0.0.0"
 
 // Dla stron hostingowych, które będą pośrednikami między Twoim serwerem a frontendem,
 
-app.set('trust proxy', true)
+app.set('trust proxy', 1)
 
 // Pozwól na żądania z Twojego frontendu i tłumaczenie na JSON
 app.use(cors({

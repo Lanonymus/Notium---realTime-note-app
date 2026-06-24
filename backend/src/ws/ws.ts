@@ -256,16 +256,21 @@ setInterval(async () => {
         const room = rooms[roomId]
 
         if(room && room.isDirty) {
+
+            // Robimy snapshot co 30 sekund, który chcemy zapisać
+            const contentToSave = room.editorContent
+            room.isDirty = false
+            
             try {
                 await db
                 .update(project)
-                .set({ editorContent: room.editorContent})
+                .set({ editorContent: contentToSave})
                 .where(eq(project.id, Number(roomId)))
                 .returning()
 
-                room.isDirty = false
                 console.log(`💾 [Auto-Save] Pokój ID: ${roomId} pomyślnie zrzucony do bazy Neon.`);
             } catch (error) {
+                room.isDirty = true
                 console.error(`❌ [Auto-Save] Błąd zapisu pokoju ID: ${roomId}:`, error);
             }
         }

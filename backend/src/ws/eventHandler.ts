@@ -46,7 +46,7 @@ export const eventHandlers: Record<string, eventHandler> = {
             console.log("nowy tytuł: ", result);
             if(!result) return ws.send(JSON.stringify({ error: "Coulnd't update the title"})) 
             
-            broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: result.editorContent });
+            broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: result.title });
         } catch (err) {
             console.error("Error updating title in db", err);
             return ws.send(JSON.stringify({ error: "Error updating title in db"})) 
@@ -70,22 +70,26 @@ export const eventHandlers: Record<string, eventHandler> = {
             const [result] = await db
                .update(project)
                 .set({
-                    chatMessages: sql`jsonb_concat(${project.chatMessages}, ${JSON.stringify([newChatMessage])}::jsonb)`
+                    chatMessages: sql`${project.chatMessages} || ${JSON.stringify([newChatMessage])}::jsonb`
                 })
                 .where(eq(project.id, roomId))
                 .returning()
 
-            console.log("new message: ", result.chatMessages);
             if(!result) return ws.send(JSON.stringify({ error: "Coulnd't add an message"})) 
-            
+            console.log("new message: ", result.chatMessages);
+                
             broadcastToRoom(room, { type: "UPDATE_CHAT", newChatMessage: newChatMessage })
         } catch (err) {
             console.error("Error updating chat messages in db", err);
+
+            // ROLLBACK w wypadku gdyby wiadomość została rozesłana po klientach a nie zapisała by się w bazie danych
+            room.chatMessages.pop()
+
             return ws.send(JSON.stringify({ error: "Error updating chat messages in db"})) 
         }
     },
     
-    "FULL_STATE": (ws, room, uuid, roomId) => {
+    "FULL_STATE": (ws, room, uuid, data, roomId) => {
         ws.send(JSON.stringify({
             type: "FULL_STATE",
             users: room.users,
