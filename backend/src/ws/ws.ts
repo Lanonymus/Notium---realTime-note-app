@@ -221,7 +221,7 @@ function initWebSocket(server: Server) {
 
                     const handler = eventHandlers[data.type]
                     if (handler) {
-                        handler(ws, room, uuid, data, roomIdNumber)
+                        handler(ws, room, uuid, data, roomIdNumber, token)
                     } else {
                         console.warn(`Unknown event type: ${data.type}`)
                     }

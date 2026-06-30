@@ -1,65 +1,62 @@
-import { BrowserRouter, Routes, Route} from 'react-router-dom'
-
-import RegisterPage from './components/Pages/registerPage'
-import NotFoundPage from './components/Pages/NotFoundPage'
-import LandingPage from './components/LandingPage'
-import LoginPage from './components/Pages/LoginPage'
-import { Home } from './Home'
-import { useEffect, useState } from 'react'
-import DashboardPage from './components/Pages/DashboardPage'
+// import { BrowserRouter, Routes, Route} from 'react-router-dom'
 
 
-function App() {
-  const [user, setUser] = useState(null)
+// // import { Home } from './Home'
+// import { useEffect, useState } from 'react'
+// import LandingPage from './components/old_components/LandingPage';
 
-  // Pobieramy informacje użytkownika
-  useEffect(() => {
-    const token = localStorage.getItem("token");
 
-    if (!token) return;
+// function App() {
+//   const [user, setUser] = useState(null)
 
-    fetch("http://localhost:8000/api/getUserData", {
-        method: "GET",
-        headers: {
-            "Authorization": token
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            setUser(data.user)
-            console.log('dane z poziomu apki', user);
+//   // Pobieramy informacje użytkownika
+//   useEffect(() => {
+//     const token = localStorage.getItem("token");
+
+//     if (!token) return;
+
+//     fetch("http://localhost:8000/api/getUserData", {
+//         method: "GET",
+//         headers: {
+//             "Authorization": token
+//         }
+//     })
+//     .then(res => res.json())
+//     .then(data => {
+//         if (data.success) {
+//             setUser(data.user)
+//             console.log('dane z poziomu apki', user);
             
-        } else {
-            console.error("Błąd", data.message);
+//         } else {
+//             console.error("Błąd", data.message);
             
-        }
-    })
-    .catch(err => console.error("Błąd seci", err));
-  }, [])
+//         }
+//     })
+//     .catch(err => console.error("Błąd seci", err));
+//   }, [])
 
 
-    // return username ? <Home username={username}/> : <Login onSubmit={setUsername}/>
-    return (
-      <BrowserRouter>
-        <Routes>
-          <Route path='/' element={<LandingPage/>} />
-          <Route path='/register' element={<RegisterPage/>} />
-          <Route path='/login' element={<LoginPage/>} />
-          <Route path='/dashboard' element={<DashboardPage/>} />
-          <Route path='editor' element={<Home username={user}/>} />
+//     // return username ? <Home username={username}/> : <Login onSubmit={setUsername}/>
+//     return (
+//       <BrowserRouter>
+//         <Routes>
+//           <Route path='/' element={<LandingPage/>} />
+//           <Route path='/register' element={<RegisterPage/>} />
+//           <Route path='/login' element={<LoginPage/>} />
+//           <Route path='/dashboard' element={<DashboardPage/>} />
+//           {/* <Route path='editor' element={<Home username={user}/>} /> */}
 
-          {/* In case of invalid link - route */}
-          <Route path='*' element={<NotFoundPage/>}/>
-        </Routes>
-      </BrowserRouter>
-    )
+//           {/* In case of invalid link - route */}
+//           <Route path='*' element={<NotFoundPage/>}/>
+//         </Routes>
+//       </BrowserRouter>
+//     )
     
-  // return (
-  //   <>
-  //     <Login onSubmit={setUsername}/>
-  //   </>
-  // )
-}
+//   // return (
+//   //   <>
+//   //     <Login onSubmit={setUsername}/>
+//   //   </>
+//   // )
+// }
 
-export default App
+// export default App

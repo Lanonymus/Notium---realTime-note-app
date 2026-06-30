@@ -1,11 +1,85 @@
 
 @import "tailwindcss";
-
+@plugin "@tailwindcss/typography";
 
 body {
     font-family: var(--font-Roboto);
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+/* Styl dla każdego obrazka w edytorze */
+.ProseMirror img {
+  cursor: pointer;
+}
+
+/* Styl, gdy użytkownik kliknie obrazek (zaznaczy go) */
+.ProseMirror img.ProseMirror-selectednode {
+  border: 3px solid #f16363; /* Np. indygo z Tailwind */
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+div[data-resize-image-ui="position-controller"] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+
+/* Stylizacja tła zaznaczonego tekstu przez innego użytkownika */
+.ProseMirror .collaboration-cursor__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 2px solid;
+  border-right: 2px solid;
+  /* Kolor borderu przeglądarka podmienia dynamicznie na ten z obiektu 'user.color' */
+  border-color: inherit; 
+  word-break: normal;
+  pointer-events: none;
+}
+
+/* Dokładny dymek (etykieta) z imieniem nad kursorem */
+.ProseMirror .collaboration-cursor__label {
+  position: absolute;
+  top: -1.4em;
+  left: -2px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  user-select: none;
+  color: #fff; /* Biały tekst wewnętrzny */
+  padding: 2px 6px;
+  border-radius: 3px 3px 3px 0;
+  white-space: nowrap;
+  /* Kolor tła dymka dopasuje się automatycznie do koloru przypisanego użytkownikowi */
+  background-color: inherit; 
+  pointer-events: none;
+}
+
+
+
+.prose ul li::marker {
+  color: #010914c7; /* Twój własny kolor HEX (np. niebieski) */
+  font-size: 1em; /* Powiększenie samej kropki */
+}
+
+.prose p {
+  margin-top: 0px !important;
+  margin-bottom: 0px !important;
+  line-height: 1.5 !important;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+}
+
+.prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: rgb(163, 163, 163); /* Szary tekst (Tailwind slate-400) */
+  font-style: italic;
+  font-size: 15px;
 }
 
 

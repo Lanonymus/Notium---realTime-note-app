@@ -6,6 +6,8 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import projectRouter from './routes/project.js'
 import { httpArcjetMiddleware } from './arcjet.js'
+import mediaRouter from './routes/uploadMedia.js'
+import deleteImgRouter from './routes/deleteImage.js'
 
 
 dotenv.config()
@@ -34,6 +36,8 @@ app.get("/", (req, res) => {
 })
 app.use("/api", userRouter);
 app.use("/api", projectRouter)
+app.use("/api", mediaRouter)
+app.use("/api", deleteImgRouter)
 
 
 initWebSocket(server);

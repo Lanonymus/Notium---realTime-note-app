@@ -8,29 +8,29 @@ import { sql } from "drizzle-orm"
 import { v4 as uuidv4, v4 } from 'uuid';
 
 // --- STRATEGIA OBSŁUGI WIADOMOŚCI WZGLĘDEM FLAGI ---
-type eventHandler = (ws: WebSocket, room: Room, uuid: string, data: any, roomId: number) => void
+type eventHandler = (ws: WebSocket, room: Room, uuid: string, data: any, roomId: number, token: string) => void
 
 export const eventHandlers: Record<string, eventHandler> = {
-    "UPDATE_CURSOR": (ws, room, uuid, data, roomId) => {
+    "UPDATE_CURSOR": (ws, room, uuid, data, roomId, token) => {
         if(!data.state || !room.users[uuid]) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
         room.users[uuid].state = data.state
-        broadcastToRoom(room, { type: "UPDATE_CURSOR", uuid: uuid, state: data.state })
+        broadcastToRoom(room, { type: "UPDATE_CURSOR", uuid: uuid, state: data.state, token: token})
     },
 
-    "UPDATE_DOC": async (ws, room, uuid, data, roomId) => {
+    "UPDATE_DOC": async (ws, room, uuid, data, roomId, token) => {
         if(!data.editorContent) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
         // Zapisujemy całe drzewo / content Slate'a w pamięci serwera
         room.editorContent = data.editorContent
         room.isDirty = true
-        broadcastToRoom(room, { type: "UPDATE_DOC", editorContent: data.editorContent })
+        broadcastToRoom(room, { type: "UPDATE_DOC", editorContent: data.editorContent, token: token})
 
     },
 
-    "UPDATE_TITLE": async (ws, room, uuid, data, roomId) => {
+    "UPDATE_TITLE": async (ws, room, uuid, data, roomId, token) => {
         if (!data.editorTitle) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         };
@@ -53,7 +53,7 @@ export const eventHandlers: Record<string, eventHandler> = {
         }
     },
 
-    "UPDATE_CHAT": async (ws, room, uuid, data, roomId) => {
+    "UPDATE_CHAT": async (ws, room, uuid, data, roomId, token) => {
         if(!data.message) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
