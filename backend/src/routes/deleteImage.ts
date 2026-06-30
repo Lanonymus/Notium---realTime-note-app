@@ -19,6 +19,10 @@ deleteImgRouter.delete("/delete-image", async (req, res) => {
 
         const urlDelimitier = `/storage/v1/object/public/${bucketName}/`
         const filePath = imgUrl.split(urlDelimitier)[1]
+        if(!filePath) return res.status(400).json({
+            message: "Invalid image URL",
+            success: false
+        })
 
         const { data, error} = await supabaseAdmin.storage
             .from(bucketName)

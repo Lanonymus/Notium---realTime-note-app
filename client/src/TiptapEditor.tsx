@@ -96,7 +96,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
         sendPayLoad({
           type: "UPDATE_DOC",
           editorContent: dataJSON,
-          token: token 
+          uuid: uuidRef.current 
         })
       
     },
@@ -107,7 +107,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
         const { from, to } = editor.state.selection
         sendPayLoad({
           type: "UPDATE_CURSOR",
-          token: token,
+          uuid: uuidRef.current,
           state: {
             from,
             to,
@@ -136,7 +136,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
     }
   })
 
-  const { sendPayLoad } = useEditorWebSocket({ editor, roomId, token, setRemoteCursors})
+  const { sendPayLoad, uuidRef } = useEditorWebSocket({ editor, roomId, token, setRemoteCursors})
 
 
   useEffect(() => {

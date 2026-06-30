@@ -54,7 +54,11 @@ export const CustomRemoteCursors = Extension.create({
                 // 🛡️ Zabezpieczenie (BARDZO WAŻNE): 
                 // Ignoruj kursor, jeśli wykracza poza aktualną długość dokumentu.
                 // (Zapobiega crashom aplikacji "RangeError", gdy ktoś usunie tekst)
-                if (cursor.from < 0 || cursor.from > state.doc.content.size) return;
+                const docSize = state.doc.content.size;
+                if (
+                  cursor.from < 0 || cursor.from > docSize ||
+                  cursor.to   < 0 || cursor.to   > docSize
+                ) return;
 
                 // 1. SELEKCJA (ZAZNACZENIE TEKSTU): Jeśli użytkownik zaznaczył obszar
                 if (cursor.from !== cursor.to) {

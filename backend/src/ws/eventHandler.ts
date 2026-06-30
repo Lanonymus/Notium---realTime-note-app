@@ -8,29 +8,29 @@ import { sql } from "drizzle-orm"
 import { v4 as uuidv4, v4 } from 'uuid';
 
 // --- STRATEGIA OBSŁUGI WIADOMOŚCI WZGLĘDEM FLAGI ---
-type eventHandler = (ws: WebSocket, room: Room, uuid: string, data: any, roomId: number, token: string) => void
+type eventHandler = (ws: WebSocket, room: Room, uuid: string, data: any, roomId: number) => void
 
 export const eventHandlers: Record<string, eventHandler> = {
-    "UPDATE_CURSOR": (ws, room, uuid, data, roomId, token) => {
+    "UPDATE_CURSOR": (ws, room, uuid, data, roomId) => {
         if(!data.state || !room.users[uuid]) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
         room.users[uuid].state = data.state
-        broadcastToRoom(room, { type: "UPDATE_CURSOR", uuid: uuid, state: data.state, token: token})
+        broadcastToRoom(room, { type: "UPDATE_CURSOR", uuid: uuid, state: data.state})
     },
 
-    "UPDATE_DOC": async (ws, room, uuid, data, roomId, token) => {
+    "UPDATE_DOC": async (ws, room, uuid, data, roomId) => {
         if(!data.editorContent) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
         // Zapisujemy całe drzewo / content Slate'a w pamięci serwera
         room.editorContent = data.editorContent
         room.isDirty = true
-        broadcastToRoom(room, { type: "UPDATE_DOC", editorContent: data.editorContent, token: token})
+        broadcastToRoom(room, { type: "UPDATE_DOC", editorContent: data.editorContent})
 
     },
 
-    "UPDATE_TITLE": async (ws, room, uuid, data, roomId, token) => {
+    "UPDATE_TITLE": async (ws, room, uuid, data, roomId) => {
         if (!data.editorTitle) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         };
@@ -46,14 +46,14 @@ export const eventHandlers: Record<string, eventHandler> = {
             console.log("nowy tytuł: ", result);
             if(!result) return ws.send(JSON.stringify({ error: "Coulnd't update the title"})) 
             
-            broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: result.title });
+            broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: result.title, uuid: uuid });
         } catch (err) {
             console.error("Error updating title in db", err);
             return ws.send(JSON.stringify({ error: "Error updating title in db"})) 
         }
     },
 
-    "UPDATE_CHAT": async (ws, room, uuid, data, roomId, token) => {
+    "UPDATE_CHAT": async (ws, room, uuid, data, roomId) => {
         if(!data.message) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }

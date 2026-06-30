@@ -201,7 +201,7 @@ function initWebSocket(server: Server) {
             }
 
             // D. Wysłanie stanu początkowego (WELCOME + FULL_STATE) do klienta
-            ws.send(JSON.stringify({ type: "WELCOME", uuid }));
+            ws.send(JSON.stringify({ type: "WELCOME", uuid: uuid }));
             ws.send(JSON.stringify({
                 type: "FULL_STATE",
                 users: room.users,

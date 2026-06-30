@@ -11,11 +11,10 @@ type EditorWebSocketProps = {
 
 export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: EditorWebSocketProps) {
     const socketRef = useRef<WebSocket | null>(null)
+    const uuidRef = useRef<string>("")
 
     useEffect(() => {
         if(!editor || !roomId || !token) return
-
-        if(!roomId || !token) return
         const wsUrl = `ws://localhost:8000/ws?room=${encodeURIComponent(roomId)}&token=${encodeURIComponent(token)}`;
 
         const ws = new WebSocket(wsUrl);
@@ -29,8 +28,8 @@ export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: E
         try {
             const data = JSON.parse(event.data)
 
-            if(data.token === token) {
-            // console.log("nie potrzeba zmiany ty jesteś autorem");
+            if(data.uuid === uuidRef.current) {
+            console.log("nie potrzeba zmiany ty jesteś autorem");
             return
             }
             if(data.type === "UPDATE_CURSOR" && data.state) {
@@ -40,13 +39,17 @@ export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: E
             
             setRemoteCursors(prev => ({
                 ...prev,
-                [data.token]: {
+                [data.uuid]: {
                 from,
                 to,
                 name,
                 color
                 }
             }))          
+            }
+            if(data.type === "WELCOME" && data.uuid) {
+                uuidRef.current = data.uuid
+                console.log("welcome from server: ", uuidRef.current);
             }
 
             if(data.type === "FULL_STATE" && data.editorContent) {
@@ -87,5 +90,5 @@ export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: E
         }
     } 
 
-    return { sendPayLoad }
+    return { sendPayLoad, uuidRef }
 }
