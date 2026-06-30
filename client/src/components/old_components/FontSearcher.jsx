@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react"
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowDown01Icon  } from '@hugeicons/core-free-icons';
 import { ArrowRight01Icon  } from '@hugeicons/core-free-icons';
-import useFonts from "../hooks/useFonts";
+import useFonts from "../../hooks/useFonts";
 import FontPreview from "./FontPreview";
 
 

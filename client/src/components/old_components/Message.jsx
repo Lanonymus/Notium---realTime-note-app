@@ -4,9 +4,9 @@ import { Edit03Icon  } from '@hugeicons/core-free-icons';
 import { Delete02Icon  } from '@hugeicons/core-free-icons';
 import { Tick01Icon  } from '@hugeicons/core-free-icons'; 
 import { useEffect, useRef, useState } from 'react';
-import AutoResizeTextarea from '../hooks/AutoResizeTextarea';
-import { HighlightTags } from './Functions/HighlightTags';
-import TextFile from './FileFormats.jsx/textFile';
+import AutoResizeTextarea from '../../hooks/AutoResizeTextarea';
+import { HighlightTags } from '../Functions/HighlightTags';
+import TextFile from '../FileFormats.jsx/textFile';
 
 function timeAgo(from, to = new Date()) {
   const ms = to - from;

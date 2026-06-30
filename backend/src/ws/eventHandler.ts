@@ -16,7 +16,7 @@ export const eventHandlers: Record<string, eventHandler> = {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
         room.users[uuid].state = data.state
-        broadcastToRoom(room, { type: "UPDATE_CURSOR", uuid: uuid, state: data.state })
+        broadcastToRoom(room, { type: "UPDATE_CURSOR", uuid: uuid, state: data.state})
     },
 
     "UPDATE_DOC": async (ws, room, uuid, data, roomId) => {
@@ -26,7 +26,7 @@ export const eventHandlers: Record<string, eventHandler> = {
         // Zapisujemy całe drzewo / content Slate'a w pamięci serwera
         room.editorContent = data.editorContent
         room.isDirty = true
-        broadcastToRoom(room, { type: "UPDATE_DOC", editorContent: data.editorContent })
+        broadcastToRoom(room, { type: "UPDATE_DOC", editorContent: data.editorContent})
 
     },
 
@@ -46,7 +46,7 @@ export const eventHandlers: Record<string, eventHandler> = {
             console.log("nowy tytuł: ", result);
             if(!result) return ws.send(JSON.stringify({ error: "Coulnd't update the title"})) 
             
-            broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: result.title });
+            broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: result.title, uuid: uuid });
         } catch (err) {
             console.error("Error updating title in db", err);
             return ws.send(JSON.stringify({ error: "Error updating title in db"})) 

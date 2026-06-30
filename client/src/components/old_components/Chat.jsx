@@ -6,13 +6,13 @@ import { Attachment01Icon  } from '@hugeicons/core-free-icons';
 import { SentIcon  } from '@hugeicons/core-free-icons';
 import { useEffect, useRef, useState } from 'react';
 import Message from './Message';
-import AutoResizeTextarea from '../hooks/AutoResizeTextarea';
+import AutoResizeTextarea from '../../hooks/AutoResizeTextarea';
 import { v4 as uuidv4 } from 'uuid'
 import ToolTip from './ToolTip';
 import EmojiMenu from './EmojiMenu';
 import React from 'react';
 import FileUploader from './FileUploader';
-import InputFile from './FileFormats.jsx/inputFile';
+import InputFile from '../FileFormats.jsx/inputFile';
 
 export default  React.memo(function Chat({ 
     handleChatChange,

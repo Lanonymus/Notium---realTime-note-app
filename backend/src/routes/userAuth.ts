@@ -37,7 +37,7 @@ userRouter.post("/register", async (req, res) => {
         passwordHash: passwordHash
     }).returning();
 
-    const jwtToken = jwt.sign({ userId: user.id }, JWT_SECRET, {   expiresIn: "24h" });
+    const jwtToken = jwt.sign({ userId: user.id }, JWT_SECRET, {   expiresIn: "7d" });
 
     res.status(201).json({ 
       success: true, 
@@ -103,7 +103,7 @@ userRouter.post("/login", async (req, res) => {
         success: false 
     })}
 
-    const token = jwt.sign({ userId: user.id, username: user.username}, JWT_SECRET, { expiresIn: '24h'})
+    const token = jwt.sign({ userId: user.id, username: user.username}, JWT_SECRET, { expiresIn: '7d'})
     return res.status(201).json({ 
       message: "Login successful",
       flag: "LOGIN_SUCCESS",
