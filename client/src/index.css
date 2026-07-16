@@ -42,6 +42,8 @@ div[data-resize-image-ui="position-controller"] {
   pointer-events: none;
 }
 
+
+
 /* Dokładny dymek (etykieta) z imieniem nad kursorem */
 .ProseMirror .collaboration-cursor__label {
   position: absolute;
@@ -60,6 +62,64 @@ div[data-resize-image-ui="position-controller"] {
   background-color: inherit; 
   pointer-events: none;
 }
+
+
+/* Niezawodny styl dla klikniętej/aktywnej komórki */
+.tiptap td.has-focus,
+.tiptap th.has-focus {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+  box-shadow: inset 0 0 0 2px #3b82f6 !important;
+  outline: none !important;
+}
+
+
+/* Stylowanie zaznaczonych komórek (niebieski, przezroczysty overlay) */
+.tiptap .selectedCell::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(59, 130, 246, 0.15) !important; /* Niebieski tailwindowy blue-500 z przezroczystością */
+  border: 2px solid rgba(59, 130, 246, 0.7) !important; /* Delikatna ramka wokół zaznaczonej komórki */
+  pointer-events: none; /* Gwarantuje, że nakładka nie zablokuje wpisywania tekstu */
+}
+
+
+/* 1. Musimy sprawić, by cała tabela ucinała elementy, które z niej wystają */
+.tiptap table {
+  position: relative;
+  overflow: hidden; /* Klasyczny trik - łapie uciekające w dół paski */
+}
+
+/* 2. Aktualizacja paska zmiany rozmiaru */
+.tiptap .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: -1000px;
+  /* Zamiast bottom: 0, strzelamy paskiem daleko w dół */
+  height: 10000px; 
+  width: 5px;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+  z-index: 20;
+  cursor: col-resize;
+}
+
+/* Pokazuj niebieski pasek TYLKO po najechaniu myszką lub podczas przeciągania */
+.tiptap .column-resize-handle:hover,
+.tiptap .column-resize-handle:active,
+.tiptap .resize-cursor .column-resize-handle {
+  background-color: #3b82f6;
+}
+.tiptap table p {
+  margin: 0;
+}
+
+
+
 
 .prose ul li::marker {
   color: #010914c7; /* Twój własny kolor HEX (np. niebieski) */

@@ -29,9 +29,28 @@ export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: E
             const data = JSON.parse(event.data)
 
             if(data.uuid === uuidRef.current) {
-            console.log("nie potrzeba zmiany ty jesteś autorem");
-            return
+                // WAŻNE: Zrób dokładnie to samo zabezpieczenie dla FULL_STATE, 
+                // ponieważ jeśli serwer to wyśle bez uuid, ominie pierwszy if() na górze!
+                if(data.type === "FULL_STATE" && data.editorContent) {
+                    const currentContent = editor.getJSON();
+                    if (JSON.stringify(currentContent) === JSON.stringify(data.editorContent)) {
+                        return; 
+                    }
+                    
+                    const contentToLoad = Object.keys(data.editorContent).length > 0 ? data.editorContent : "";
+                    editor.chain()
+                        .command(({ tr }) => {
+                            tr.setMeta("addToHistory", false);
+                            return true;
+                        })
+                        .setContent(contentToLoad, { emitUpdate: false })
+                        .run();
+                    console.log("FULL_STATE received and content updated from server");
+                }
+                // console.log("nie potrzeba zmiany ty jesteś autorem");
+                return
             }
+
             if(data.type === "UPDATE_CURSOR" && data.state) {
             console.log("ktoś zmienił selekcje");
             
@@ -52,19 +71,30 @@ export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: E
                 console.log("welcome from server: ", uuidRef.current);
             }
 
-            if(data.type === "FULL_STATE" && data.editorContent) {
-            const contentToload = Object.keys(data.editorContent).length > 0 ? data.editorContent : ""
-            // pass options object to match SetContentOptions type (avoid boolean arg)
-            editor.commands.setContent(contentToload, { emitUpdate: false})
-            }
 
             if(data.type === "UPDATE_DOC" && data.editorContent) {
-            const { from, to} = editor.state.selection
+                // 1. SZYBKIE SPRAWDZENIE: Zanim wywołamy destrukcyjne setContent, 
+                // sprawdźmy czy treść z serwera różni się od naszej.
+                const currentContent = editor.getJSON();
+                if (JSON.stringify(currentContent) === JSON.stringify(data.editorContent)) {
+                    console.log("🛡️ Zatrzymano zbędny setContent (treść jest identyczna)");
+                    return; 
+                }
 
-            const contentToLoad = Object.keys(data.editorContent).length > 0 ? data.editorContent : ""
-            editor.commands.setContent(contentToLoad, { emitUpdate: false})
-            editor.commands.setTextSelection({ from, to})
+                const { from, to } = editor.state.selection;
+                const contentToLoad = Object.keys(data.editorContent).length > 0 ? data.editorContent : "";
+
+                editor.chain()
+                    .command(({ tr }) => {
+                        tr.setMeta("addToHistory", false);
+                        return true;
+                    })
+                    .setContent(contentToLoad, { emitUpdate: false })
+                    .setTextSelection({ from, to })
+                    .run();
             }
+
+
         } catch (err) {
             console.error('Error parsing WebSocket message:', err)
         }
