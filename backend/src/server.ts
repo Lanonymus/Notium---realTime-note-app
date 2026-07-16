@@ -8,6 +8,7 @@ import projectRouter from './routes/project.js'
 import { httpArcjetMiddleware } from './arcjet.js'
 import mediaRouter from './routes/uploadMedia.js'
 import deleteImgRouter from './routes/deleteImage.js'
+import Router_AI from './routes/notiumAi.js'
 
 
 dotenv.config()
@@ -38,6 +39,8 @@ app.use("/api", userRouter);
 app.use("/api", projectRouter)
 app.use("/api", mediaRouter)
 app.use("/api", deleteImgRouter)
+app.use("/api", Router_AI);
+
 
 
 initWebSocket(server);

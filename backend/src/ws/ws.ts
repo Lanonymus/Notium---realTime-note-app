@@ -207,7 +207,8 @@ function initWebSocket(server: Server) {
                 users: room.users,
                 editorContent: room.editorContent,
                 editorTitle: room.editorTitle,
-                chatMessages: room.chatMessages
+                chatMessages: room.chatMessages,
+                uuid: uuid,
             }));
 
             // Broadcast do innych, że ktoś nowy wbił
@@ -221,7 +222,7 @@ function initWebSocket(server: Server) {
 
                     const handler = eventHandlers[data.type]
                     if (handler) {
-                        handler(ws, room, uuid, data, roomIdNumber, token)
+                        handler(ws, room, uuid, data, roomIdNumber)
                     } else {
                         console.warn(`Unknown event type: ${data.type}`)
                     }
