@@ -90,8 +90,14 @@ export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: E
                         return true;
                     })
                     .setContent(contentToLoad, { emitUpdate: false })
-                    .setTextSelection({ from, to })
                     .run();
+
+                try {
+                    editor.commands.setTextSelection({ from, to })
+                } catch (error) {
+                    console.warn("couldn't restore the previous selection due to shortage of document range")
+                    editor.commands.focus("end")
+                }
             }
 
 

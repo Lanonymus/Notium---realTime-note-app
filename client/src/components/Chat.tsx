@@ -102,7 +102,9 @@ export default function Chat({ editor }: { editor: Editor}) {
             const reader = response.body?.getReader();
             const decoder = new TextDecoder("utf-8");
 
-            if (!reader) return;
+            if (!reader) {
+              throw new Error("AI response did not include a stream")
+            }
 
             let accumulatedText = "";
 

@@ -57,10 +57,13 @@ export const AiBlockView: React.FC<NodeViewProps> = ({ node, editor, getPos, del
       
       // 1. Zamieniamy blok AI na oryginalny tekst
       setTimeout(() => {
-          editor.chain()
-          .focus()
-          .insertContentAt({ from, to }, userSelectedContent.content) // Wstawiamy tekst w miejsce bloku
-          .run();
+        const chain = editor.chain().focus()
+        if(userSelectedContent?.content) {
+          chain.insertContentAt({ from, to }, userSelectedContent.content) // Wstawiamy tekst w miejsce bloku
+        } else {
+          chain.deleteRange({ from, to})
+        }
+        chain.run()
       }, 0)
 
       // 2. Sprzątamy UI
