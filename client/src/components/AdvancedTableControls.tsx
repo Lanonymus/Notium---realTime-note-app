@@ -74,6 +74,7 @@ export default function AdvancedTableControls({ editor }: TableControlsProps) {
       const cellRect = activeCell.getBoundingClientRect()
       const tableRect = activeTable.getBoundingClientRect()
 
+
       setTableRECT({ 
         top: tableRect.top,
         left: tableRect.left,
@@ -101,20 +102,20 @@ export default function AdvancedTableControls({ editor }: TableControlsProps) {
 
       // PRAWY PLUS (Dodaj kolumnę na końcu) - na środku wysokości tabeli, po prawej stronie
       setRightPlus({
-        top: tableRect.top - containerRect.top + 12, // 8px odstępu od dolnej krawędzi
+        top: tableRect.top - containerRect.top + 7, // 8px odstępu od dolnej krawędzi
         left: tableRect.left - containerRect.left + tableRect.width + 45, // 8px odstępu od prawej krawędzi
       })
 
       // DOLNY PLUS (Dodaj wiersz na końcu) - na środku szerokości tabeli, pod tabelą
       setBottomPlus({
-        top: tableRect.top - containerRect.top + tableRect.height + 18,
+        top: tableRect.top - containerRect.top + tableRect.height + 12,
         left: tableRect.left - containerRect.left + 40,
       })
 
       // Ustawianie pozycji ustawień tabeli
       setSettingsPos({
-        top: tableRect.top - containerRect.top - 2,
-        left: tableRect.left - containerRect.left + 40 + 1
+        top: tableRect.top - containerRect.top - 6,
+        left: tableRect.left - containerRect.left + 40
       })
 
       setVisible(true)
@@ -130,6 +131,8 @@ export default function AdvancedTableControls({ editor }: TableControlsProps) {
   useEffect(() => {
     editor.on("selectionUpdate", updateControls)
     editor.on("update", updateControls)
+    window.addEventListener("resize", updateControls)
+    window.addEventListener("panel-resize", updateControls)
     
     // Opcjonalnie: nasłuchuj na scroll wewnątrz edytora, by ukryć/zaktualizować gripy
     const container = editor.view.dom.parentElement
@@ -140,6 +143,8 @@ export default function AdvancedTableControls({ editor }: TableControlsProps) {
     return () => {
       editor.off("selectionUpdate", updateControls)
       editor.off("update", updateControls)
+      window.removeEventListener("resize", updateControls)
+      window.removeEventListener("panel-resize", updateControls)
       if (container) {
         container.removeEventListener("scroll", updateControls)
       }
