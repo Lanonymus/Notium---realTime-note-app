@@ -21,12 +21,19 @@ import { TableRow } from "@tiptap/extension-table-row"
 import AdvancedTableControls from "./components/AdvancedTableControls";
 import { Focus } from "@tiptap/extension-focus"
 import { CustomTableCell, CustomTableHeader } from "./extensions/CustomTableCellBgColor";
-import { Table } from "@tiptap/extension-table"
+import { Table, TableHeader } from "@tiptap/extension-table"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import Chat from "./components/Chat";
 import InlineAiChat from "./components/InlineAiChat";
 import { AiBlock } from "./extensions/AiBlock";
 import { Slice } from "@tiptap/pm/model"
+import { CellSelection } from "@tiptap/pm/tables"
+import { PanelImperativeHandle } from "react-resizable-panels";
+import animatePanelSize from "./components/Functions/AnimatePanelSize";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, MessagesSquare } from "lucide-react";
+import FontFamily from "@tiptap/extension-font-family"
+import { FontSize } from "./extensions/FontSize";
 
 
 type TipTapEditorProps = {
@@ -57,6 +64,12 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
   const [userSelectedContent, setUserSelectedContent] = useState<Slice | null>(null)
   const [showInlineAiBubble, setShowInlineAiBubble] = useState<boolean>(false)
   const newContext = useRef<string>("")
+  const [aiChatContext, setAiChatContext] = useState<string>("No context provided")
+  const aiChatPanelRef = useRef<PanelImperativeHandle | null>(null)
+  const editorPanelRef = useRef<PanelImperativeHandle | null>(null)
+  const panelSizes = useRef({ editor: 65, ai: 35 });
+  const [ isEditorMaximized, setIsEditorMaximized ] = useState(false)
+  const [ isAiChatMaximized, setIsAiChatMaximized ] = useState(false)
 
   const editor = useEditor({
     extensions: [
@@ -69,6 +82,8 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
       }),
       CustomHighlight,
       TextStyle,
+      FontFamily,
+      FontSize,
       AiBlock,
       Color,
       KeyBoardShortcuts,
@@ -237,6 +252,26 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
 
   }
 
+
+
+    const fullScreenAiPanel = () => {
+      animatePanelSize(editorPanelRef, panelSizes.current.editor * 12, 0, 800); 
+    };
+
+    const fullScreenEditorPanel = () => {
+      animatePanelSize(aiChatPanelRef, panelSizes.current.ai * 12, 0, 800); 
+    };
+
+    const halfScreenAiPanel = () => {
+      animatePanelSize(aiChatPanelRef, panelSizes.current.ai * 12 , 500, 800); 
+    };
+
+    const halfScreenEditorPanel = () => {
+      animatePanelSize(aiChatPanelRef, panelSizes.current.ai * 12, 500, 800); 
+    };
+
+
+    
   const { sendPayLoad, uuidRef } = useEditorWebSocket({ editor, roomId, token, setRemoteCursors})
 
 
@@ -325,6 +360,9 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
 
 
 
+
+
+
   if (!editor) {
     return <p>Ładowanie edytora...</p>;
   }
@@ -360,8 +398,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
           // --- TRYB A: Zwykłe menu formatowania tekstu ---
           <BubbleMenuText 
             editor={editor} 
-            onAiAskClick={() => {
-              
+            onGenerateWithAiClick={() => {
               const { from, to } = editor.state.selection
               const contextText = editor.state.doc.textBetween(from, to)
               const slice = editor.state.doc.slice(from, to)
@@ -375,6 +412,60 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
               
               setShowInlineAiBubble(true)
             }} 
+            onAskAiClick={() => {
+              console.log("kliknięto pytanie do ai");
+              const { selection } = editor.state
+              let contextText = ""
+
+              if (selection instanceof CellSelection) {
+                let contextList: string[] = []
+                let tableHeaders: string[] = []
+                
+                selection.forEachCell((node) => {
+                  // Zabezpieczenie przed enterami w komórkach (Markdown ich nie lubi)
+                  const text = node.textContent.trim().replace(/\n/g, " ")
+                  
+                  if (node.type.name === 'tableHeader') {
+                    if (text) {
+                      tableHeaders.push(`| ${text} |`)
+                    }
+                  } else {
+                    if (text) {
+                      contextList.push(`| ${text} |`)
+                    }
+                  }
+                })
+
+                // 1. Dodawanie nagłówków (tylko jeśli istnieją)
+                if (tableHeaders.length > 0) {
+                  contextText = "Nagłówki tabeli\t" + tableHeaders.join("\t") + "\n"
+                }
+
+                // 2. Dodawanie zawartości komórek
+                if (contextList.length > 0 && tableHeaders.length > 0) {
+                  for (let i = 0; i < contextList.length; i++) {
+                    contextText += "\t" + contextList[i]
+                    
+                    // Przełamanie wiersza na podstawie liczby nagłówków
+                    if ((i + 1) % tableHeaders.length === 0) {
+                      contextText += "\n"
+                    }
+                  }
+                } else {
+                  // Fallback na wypadek zaznaczenia komórek bez nagłówków
+                  contextText += contextList.join(" | ")
+                }
+
+              } else {
+                const { from, to } = selection
+                contextText = editor.state.doc.textBetween(from, to, " ")
+              }
+              setAiChatContext(contextText)
+
+              console.log("selekcja: ", selection);
+              console.log('zaznaczony tekst w komórkach (Ask AI):\n', contextText);              
+            }}
+            
           />
 
         ) : (
@@ -442,7 +533,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
     
   <div className="h-screen w-screen flex flex-col items-center pt-15 pb-5 bg-white">
     {/* Główny kontener na cały obszar roboczy (np. 80% szerokości ekranu) */}
-    <div className="w-[85%] h-full  flex flex-col">
+    <div className="w-[85%] h-full  flex flex-col pb-15">
 
       <input 
         type="text" 
@@ -452,42 +543,92 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
         className="text-3xl placeholder-gray-300 placeholder:font-medium font-bold py-2 mb-2
           outline-transparent focus:outline-2 focus:outline-dashed focus:outline-gray-300 w-full"
       />
-
-      <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
+           
+      <div className="h-full w-full relative">
         
-        <ResizablePanel defaultSize={65} minSize={40} className="flex flex-col bg-white">
-          <div className="relative prose prose-slate max-w-none w-full overflow-y-auto flex-1
-            prose-markers:text-slate-900 border border-gray-200 rounded-[6px] py-2 px-10 
-            
-          selection:bg-blue-500/30 selection:text-inherit
-          [&_.tiptap]:selection:bg-blue-500/30
+        <Button 
+          variant={"outline"} 
+          className={`absolute z-999 top-[0px] right-[0px] mt-4 ${isEditorMaximized ? "mr-8" : "mr-4"} transition-all duration-200 h-[35px]`} 
+          onClick={() => {
+            if (isEditorMaximized) {
+              halfScreenEditorPanel() 
+              setIsEditorMaximized(false)
 
-            [&::-webkit-scrollbar]:w-[5px]
-            [&::-webkit-scrollbar]:h-[5px]
-            [&::-webkit-scrollbar-track]:bg-gray-100
-            [&::-webkit-scrollbar-thumb]:bg-gray-300
-            [&::-webkit-scrollbar-thumb]:rounded-[4px]
-            ">
-            
-            {/* Zaawansowany system kontroli tabeli */}
-            {editor && <AdvancedTableControls editor={editor} />}
+            } else {
+              fullScreenEditorPanel() 
+              setIsEditorMaximized(true)
+            }
+          }}>
+          {isEditorMaximized ? (
+            <MessagesSquare className="w-4 h-4 stroke-gray-800" />
+          ) : (
+            <ArrowRight className="w-4 h-4 stroke-gray-800" />
+          )}
 
-            <EditorContent editor={editor} />
-          </div>
-            
-        </ResizablePanel>
+        </Button>
 
-        {/* --- UCHWYT --- */}
-        {/* Usunąłem sztywną szerokość w-[15px] na rzecz standardowego, ładnego paska shadcn */}
-        <ResizableHandle withHandle={true} className="bg-white! w-[9px]  hover:bg-blue-100  transition-colors 
-          [&>div]:h-[55px] [&>div]:cursor-col-resize! cursor-col-resize!" />
+        <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
+                
+                <ResizablePanel defaultSize={65} minSize={0}  panelRef={editorPanelRef}  onResize={(size) => {
+                  panelSizes.current.editor = size.asPercentage
+                  window.dispatchEvent(new CustomEvent('panel-resize'))
+                }} className={`flex flex-col bg-white`}>
+                  <div className={`relative prose prose-slate max-w-none w-full overflow-y-auto flex-1
+                    prose-markers:text-slate-900 border border-gray-200 rounded-[6px] py-2 px-10 
+                    
+                  selection:bg-blue-500/30 selection:text-inherit
+                  [&_.tiptap]:selection:bg-blue-500/30
 
-        {/* --- PRAWY PANEL (AI) --- */}
-        <ResizablePanel defaultSize={35} minSize={25} className="w-full h-full bg-[#FAFAFA] flex flex-col relative border-1 border-gray-200">
-          <Chat editor={editor}/>
-        </ResizablePanel>
+                    [&::-webkit-scrollbar]:w-[5px]
+                    [&::-webkit-scrollbar]:h-[5px]
+                    [&::-webkit-scrollbar-track]:bg-gray-100
+                    [&::-webkit-scrollbar-thumb]:bg-gray-300
+                    [&::-webkit-scrollbar-thumb]:rounded-[4px]
+                    `}>
+                    
+                    {/* Zaawansowany system kontroli tabeli */}
+                    {editor && <AdvancedTableControls editor={editor} />}
 
-      </ResizablePanelGroup>
+                    <EditorContent editor={editor} />
+                  </div>
+                    
+                </ResizablePanel>
+
+                {/* --- UCHWYT --- */}
+                {/* Usunąłem sztywną szerokość w-[15px] na rzecz standardowego, ładnego paska shadcn */}
+                <ResizableHandle withHandle={true} className="bg-white! w-[9px]  hover:bg-blue-100  transition-colors 
+                  [&>div]:h-[55px] [&>div]:cursor-col-resize! cursor-col-resize!" />
+
+                {/* --- PRAWY PANEL (AI) --- */}
+                <ResizablePanel 
+                  defaultSize={35}
+                  minSize={0}
+                  onResize={(size) => panelSizes.current.ai = size.asPercentage} // AKTUALIZACJA STANU 
+                  panelRef={aiChatPanelRef} 
+                  className={`w-full h-full bg-[#FAFAFA] flex flex-col relative border-1 border-gray-200`} 
+                  // onResize={(size) => setAiChatPanel(size.asPercentage)}
+                >
+                  <Chat 
+                    editor={editor} 
+                    context={aiChatContext}
+                    onResetContext={() => {
+                      setAiChatContext("No context provided")
+                    }}  
+                    onMaximizePanel={() => {
+                      if (isAiChatMaximized) {
+                        halfScreenAiPanel()
+                        setIsAiChatMaximized(false)
+                      } else {
+                        fullScreenAiPanel()
+                        setIsAiChatMaximized(true)
+                      }
+                    }}
+                  />
+                </ResizablePanel>
+
+              </ResizablePanelGroup>
+      </div>
+    
       
     </div>
   </div>
