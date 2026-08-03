@@ -1,17 +1,19 @@
 import { Editor } from "@tiptap/core";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 
 type EditorWebSocketProps = {
     editor: Editor,
+    setTitle: (value: string) => void,
     roomId: number | null,
     token: string | null,
     setRemoteCursors: React.Dispatch<React.SetStateAction<Record<string, any>>>
 }
 
-export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: EditorWebSocketProps) {
+export function useEditorWebSocket({ editor, setTitle, roomId, token, setRemoteCursors}: EditorWebSocketProps) {
     const socketRef = useRef<WebSocket | null>(null)
     const uuidRef = useRef<string>("")
+    const [isContentLoaded, setIsContentLoaded] = useState(false)
 
     useEffect(() => {
         if(!editor || !roomId || !token) return
@@ -27,6 +29,12 @@ export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: E
         ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data)
+
+            if(data.type === "WELCOME" && data.uuid) {
+                uuidRef.current = data.uuid
+                console.log("welcome from server: ", uuidRef.current);
+                setIsContentLoaded(true)
+            }
 
             if(data.uuid === uuidRef.current) {
                 // WAŻNE: Zrób dokładnie to samo zabezpieczenie dla FULL_STATE, 
@@ -45,30 +53,35 @@ export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: E
                         })
                         .setContent(contentToLoad, { emitUpdate: false })
                         .run();
-                    console.log("FULL_STATE received and content updated from server");
+
+                    setTitle(data.editorTitle)
+                    // console.log("FULL_STATE received and content updated from server");
                 }
                 // console.log("nie potrzeba zmiany ty jesteś autorem");
                 return
             }
 
             if(data.type === "UPDATE_CURSOR" && data.state) {
-            console.log("ktoś zmienił selekcje");
-            
-            const { from, to, name, color } = data.state
-            
-            setRemoteCursors(prev => ({
-                ...prev,
-                [data.uuid]: {
-                from,
-                to,
-                name,
-                color
-                }
-            }))          
+                console.log("ktoś zmienił selekcje");
+                
+                const { from, to, name, color } = data.state
+                
+                setRemoteCursors(prev => ({
+                    ...prev,
+                    [data.uuid]: {
+                    from,
+                    to,
+                    name,
+                    color
+                    }
+                }))          
             }
-            if(data.type === "WELCOME" && data.uuid) {
-                uuidRef.current = data.uuid
-                console.log("welcome from server: ", uuidRef.current);
+
+            if(data.type === "UPDATE_TITLE" && data.editorTitle !== undefined) {
+                // console.log("ktoś zmienił tytuł");
+
+                // console.log("nowy tytuł: ", data.editorTitle);
+                setTitle(data.editorTitle)
             }
 
 
@@ -126,5 +139,5 @@ export function useEditorWebSocket({ editor, roomId, token, setRemoteCursors}: E
         }
     } 
 
-    return { sendPayLoad, uuidRef }
+    return { sendPayLoad, uuidRef, isContentLoaded }
 }

@@ -176,7 +176,7 @@ export default function InlineAiChat({ editor, aiContextText, userSelectedConten
                 body: JSON.stringify({
                     userPrompt: promptToUse,
                     contextContent: fetchContext || "no context provided",
-                    type: "inlineAiGeneration"
+                    type: "GENERATE_INLINE_CONTENT"
                 })
             });
 

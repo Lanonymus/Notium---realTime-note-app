@@ -3,7 +3,7 @@ import TipTapEditor from "./TiptapEditor"
 
 export default function JoinRoom() {
     const [roomId, setRoomId] = useState<number | null>(1)
-    const [token, setToken] = useState<string | null>("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMyLCJpYXQiOjE3ODQzNzM1MzAsImV4cCI6MTc4NDk3ODMzMH0.6SYQE85e6QtmiyDmzMzTUTAqmtoyvFMgU-wpPXvTLyI")
+    const [token, setToken] = useState<string | null>("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjM0LCJpYXQiOjE3ODU1OTA1MDYsImV4cCI6MTc4NjE5NTMwNn0.qe_z8FjqfxPXv6v7Pix9708GugSgv1Yq84Gm26QfIZQ")
     const [isJoined, setIsJoined] = useState<boolean>(false)
 
     const JoinRoom = () => {
