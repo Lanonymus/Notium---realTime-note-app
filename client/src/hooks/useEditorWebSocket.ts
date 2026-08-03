@@ -33,7 +33,6 @@ export function useEditorWebSocket({ editor, setTitle, roomId, token, setRemoteC
             if(data.type === "WELCOME" && data.uuid) {
                 uuidRef.current = data.uuid
                 console.log("welcome from server: ", uuidRef.current);
-                setIsContentLoaded(true)
             }
 
             if(data.uuid === uuidRef.current) {
@@ -55,9 +54,8 @@ export function useEditorWebSocket({ editor, setTitle, roomId, token, setRemoteC
                         .run();
 
                     setTitle(data.editorTitle)
-                    // console.log("FULL_STATE received and content updated from server");
+                    setIsContentLoaded(true)
                 }
-                // console.log("nie potrzeba zmiany ty jesteś autorem");
                 return
             }
 
@@ -120,15 +118,16 @@ export function useEditorWebSocket({ editor, setTitle, roomId, token, setRemoteC
         }
 
         ws.onclose = () => {
-        console.log('WebSocket connection closed')
+            console.log('WebSocket connection closed')
+            setIsContentLoaded(false)
         };
 
         ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
+            console.error('WebSocket error:', error)
         };
 
         return () => {
-        ws.close()
+            ws.close()
         }
     }, [editor, roomId, token])
 

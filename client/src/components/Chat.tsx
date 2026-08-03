@@ -72,6 +72,10 @@ export default function Chat({ editor, context, isContentLoaded, onResetContext,
           }
 
           const data = await response.json()
+          
+          if(typeof data.emoji !== "string" || typeof data.title !== "string") {
+            throw new Error("Malformed format of response for title from chat")
+          }
           const chatTitleID = uuidv4();
           const chatTitle: ChatMetaData = {
             id: chatTitleID,
@@ -234,14 +238,14 @@ export default function Chat({ editor, context, isContentLoaded, onResetContext,
             
             {/* Obszar wiadomości - przewijany */}  
             <MessageScrollerProvider autoScroll>
-              <MessageScroller className="w-full h-full min-w-[150px]">
-                  <MessageScrollerViewport className="w-full h-full flex justify-center px-6 pt-8 space-y-8  min-w-[150px]
+              <MessageScroller className="w-full h-full min-w-[150px] justify-center items-center">
+                  <MessageScrollerViewport className="w-full h-full  flex px-6 pt-8 space-y-8 
                     [&::-webkit-scrollbar]:w-[4px] 
                     [&::-webkit-scrollbar-track]:bg-transparent
                     [&::-webkit-scrollbar-thumb]:bg-gray-200
                     [&::-webkit-scrollbar-thumb]:rounded-full
                   ">
-                      <MessageScrollerContent className="max-w-[650px]  min-w-[150px]">
+                      <MessageScrollerContent className="max-w-[650px] w-full">
                           {chatMessages.map((message) => {
                             const isUser = message.role === "user";
 
@@ -343,7 +347,8 @@ export default function Chat({ editor, context, isContentLoaded, onResetContext,
                 className="w-full min-h-[44px] max-h-[140px] px-1 resize-none outline-none [field-sizing:content] text-gray-850 bg-transparent placeholder:text-gray-400/90 text-[15px] leading-relaxed"
                 placeholder="Ask any question related to project..."
                 onKeyDown={(e) => {
-                  if(e.key === "Enter"){
+                  if(e.key === "Enter" && !e.shiftKey){
+                    e.preventDefault();
                     handleGenerateContent()
                   }
                 }}                

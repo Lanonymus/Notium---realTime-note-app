@@ -95,7 +95,7 @@ export default function ChatHistory({
                      text-[12px] font-medium rounded-[10px] transition-colors 
                      flex items-center justify-center gap-1.5 cursor-pointer"
         >
-          <span>{showAll ? "Zwiń" : "Pokaż więcej"}</span>
+          <span>{showAll ? "show less" : "show more"}</span>
           <ChevronDown
             className={`w-3.5 h-3.5 transition-transform duration-200 ${
               showAll ? "rotate-180" : ""

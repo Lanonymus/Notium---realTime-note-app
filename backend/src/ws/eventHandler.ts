@@ -31,18 +31,16 @@ export const eventHandlers: Record<string, eventHandler> = {
     },
 
     "UPDATE_TITLE": async (ws, room, uuid, data, roomId) => {
-        if (!data.editorTitle) {
-            if(data.editorTitle === "") {
-                room.editorTitle = data.editorTitle;
-                room.isDirty = true
+        
+        const MAX_TITLE_LENGTH = 100; // Maksymalna długość tytułu
 
-                console.log("zmiana tytułu z backa");
-                broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: data.editorTitle, uuid: uuid });
-                return
-            }
-            
-            return ws.send(JSON.stringify({ error: "Payload mismatch"}))
-        };
+        if(typeof data.editorTitle !== 'string' || data.editorTitle.length > MAX_TITLE_LENGTH) {
+            return ws.send(JSON.stringify({ 
+                error: 'Title must be a string and cannot exceed 100 characters.',
+                success: false
+            }))
+        }
+
         room.editorTitle = data.editorTitle;
         room.isDirty = true
 

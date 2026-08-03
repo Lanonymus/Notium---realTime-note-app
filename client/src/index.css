@@ -336,7 +336,7 @@ div[data-resize-image-ui="position-controller"] {
 
 
 
-@keyframes faceDown {
+@keyframes face-down {
   from {
     opacity: 0;
     transform: translateY(-12px);
@@ -348,5 +348,5 @@ div[data-resize-image-ui="position-controller"] {
 }
 
 .animate-face-down {
-  animation: faceDown 0.35s ease-out backwards;
+  animation: face-down 0.35s ease-out backwards;
 }
