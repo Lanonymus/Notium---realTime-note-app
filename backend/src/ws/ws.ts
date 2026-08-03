@@ -184,7 +184,7 @@ function initWebSocket(server: Server) {
                     users: {},
                     chatMessages: [],
                     editorContent: dbProject.editorContent || {},
-                    editorTitle: dbProject.title || "New Project"                    
+                    editorTitle: dbProject.title || ""                    
                 }
             }
 
@@ -260,16 +260,22 @@ setInterval(async () => {
 
             // Robimy snapshot co 30 sekund, który chcemy zapisać
             const contentToSave = room.editorContent
-            room.isDirty = false
+            const projectTitle = room.editorTitle
+            console.log("title: ", projectTitle);
+            
+            room.isDirty = false            
             
             try {
                 await db
                 .update(project)
-                .set({ editorContent: contentToSave})
+                .set({
+                    title: projectTitle ? projectTitle : "",
+                    editorContent: contentToSave
+                })
                 .where(eq(project.id, Number(roomId)))
                 .returning()
 
-                console.log(`💾 [Auto-Save] Pokój ID: ${roomId} pomyślnie zrzucony do bazy Neon.`);
+                console.log(`💾 [Auto-Save] Pokój ID: ${roomId} pomyślnie zrzucony do bazy supabase.`);
             } catch (error) {
                 room.isDirty = true
                 console.error(`❌ [Auto-Save] Błąd zapisu pokoju ID: ${roomId}:`, error);
@@ -277,7 +283,7 @@ setInterval(async () => {
         }
     }
      
-}, 30_000)
+}, 5_000)
 
 
 export default initWebSocket

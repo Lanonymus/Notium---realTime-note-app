@@ -31,10 +31,11 @@ import { CellSelection } from "@tiptap/pm/tables"
 import { PanelImperativeHandle } from "react-resizable-panels";
 import animatePanelSize from "./components/Functions/AnimatePanelSize";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, MessagesSquare } from "lucide-react";
+import { ArrowRight, ArrowUp, MessagesSquare } from "lucide-react";
 import FontFamily from "@tiptap/extension-font-family"
 import { FontSize } from "./extensions/FontSize";
-
+import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 
 type TipTapEditorProps = {
   roomId: number | null,
@@ -58,7 +59,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
   const lastCursorSendTime = useRef<number>(0)
   const cursorTimeOutLastUpdate = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [remoteCursors, setRemoteCursors] = useState<Record<string, CursorData>>({})  
-  const [title, setTitle] = useState<string>("Project Title")
+  const [title, setTitle] = useState<string>("")
   const [aiContextRange, setAiContextRange] = useState<AiContextRange | null>(null)
   const [aiContextText, setAiContextText] = useState<string>("")
   const [userSelectedContent, setUserSelectedContent] = useState<Slice | null>(null)
@@ -70,6 +71,9 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
   const panelSizes = useRef({ editor: 65, ai: 35 });
   const [ isEditorMaximized, setIsEditorMaximized ] = useState(false)
   const [ isAiChatMaximized, setIsAiChatMaximized ] = useState(false)
+  const titleTimeoutLastUpdate = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastTitleSendTime = useRef<number>(0)
+  const editorTitleRef = useRef<HTMLInputElement | null>(null)
 
   const editor = useEditor({
     extensions: [
@@ -272,7 +276,15 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
 
 
     
-  const { sendPayLoad, uuidRef } = useEditorWebSocket({ editor, roomId, token, setRemoteCursors})
+  const { sendPayLoad, uuidRef, isContentLoaded } = useEditorWebSocket(
+    { 
+      editor,
+      setTitle,
+      roomId,
+      token,
+      setRemoteCursors
+    }
+  )
 
 
   useEffect(() => {
@@ -371,7 +383,6 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
   return (
   <>
 
-    <ToolBar editor={editor} handleImageUpload={handleImageUpload}/>
     
     {editor && (
       <BubbleMenu
@@ -531,107 +542,154 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
     </BubbleMenu>
   )}
     
-  <div className="h-screen w-screen flex flex-col items-center pt-15 pb-5 bg-white">
-    {/* Główny kontener na cały obszar roboczy (np. 80% szerokości ekranu) */}
-    <div className="w-[85%] h-full  flex flex-col pb-15">
 
-      <input 
-        type="text" 
-        onChange={(e) => setTitle(e.target.value)} 
-        value={title} 
-        placeholder="Project Title" 
-        className="text-3xl placeholder-gray-300 placeholder:font-medium font-bold py-2 mb-2
-          outline-transparent focus:outline-2 focus:outline-dashed focus:outline-gray-300 w-full"
-      />
-           
-      <div className="h-full w-full relative">
-        
-        <Button 
-          variant={"outline"} 
-          className={`absolute z-999 top-[0px] right-[0px] mt-4 ${isEditorMaximized ? "mr-8" : "mr-4"} transition-all duration-200 h-[35px]`} 
-          onClick={() => {
-            if (isEditorMaximized) {
-              halfScreenEditorPanel() 
-              setIsEditorMaximized(false)
+{/* 1. GŁÓWNY KONTENER: Usunięto pb-35, dodano overflow-hidden */}
+  <div className="h-screen w-screen flex flex-col bg-white overflow-hidden relative">
 
-            } else {
-              fullScreenEditorPanel() 
-              setIsEditorMaximized(true)
-            }
-          }}>
-          {isEditorMaximized ? (
-            <MessagesSquare className="w-4 h-4 stroke-gray-800" />
-          ) : (
-            <ArrowRight className="w-4 h-4 stroke-gray-800" />
-          )}
 
-        </Button>
+    {/* 2. TOOLBAR: shrink-0 sprawia, że pasek trzyma swój wymiar */}
+    <div className="shrink-0">
+      <ToolBar editor={editor} handleImageUpload={handleImageUpload}/>
+    </div>
 
-        <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
-                
-                <ResizablePanel defaultSize={65} minSize={0}  panelRef={editorPanelRef}  onResize={(size) => {
-                  panelSizes.current.editor = size.asPercentage
-                  window.dispatchEvent(new CustomEvent('panel-resize'))
-                }} className={`flex flex-col bg-white`}>
-                  <div className={`relative prose prose-slate max-w-none w-full overflow-y-auto flex-1
-                    prose-markers:text-slate-900 border border-gray-200 rounded-[6px] py-2 px-10 
-                    
+    {/* 3. KONTENER GŁÓWNY: Zamiast h-full dajemy flex-1 min-h-0 oraz opcjonalny padding p-4 */}
+    <div className="flex-1 min-h-0 w-full flex flex-col items-center bg-white pb-5 pt-3">
+      
+      {/* Obszar roboczy */}
+      <div className="w-[90%] h-full flex flex-col">
+
+        {/* TYTUŁ: shrink-0 zapobiega zmniejszaniu inputu */}
+        {!isContentLoaded ? (
+            <div className="flex w-full max-w-[50%] flex-col gap-2 py-2 mb-2 shrink-0">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>        
+        ) : (
+          <input 
+            type="text" 
+            ref={editorTitleRef}
+            onChange={(e) => {
+              setTitle(e.target.value)
+              const updateTitle = () => sendPayLoad({
+                type: "UPDATE_TITLE",
+                uuid: uuidRef.current,
+                editorTitle: e.target.value 
+              })
+              updateTitle()
+            }} 
+            value={title} 
+            placeholder="Project Title" 
+            className="text-3xl placeholder-gray-300 placeholder:font-medium font-bold py-2 mb-2 shrink-0
+              outline-transparent focus:outline-2 focus:outline-dashed focus:outline-gray-300 w-full"
+          />
+        )}
+            
+        {/* 4. KONTENER EDYTOR + AI: flex-1 min-h-0 idealnie wypełnia resztę ekranu */}
+        <div className="flex-1 min-h-0 w-full relative">
+          
+          <Button 
+            variant={"outline"} 
+            className={`absolute z-999 top-[0px] right-[0px] mt-4 ${isEditorMaximized ? "mr-8" : "mr-4"} transition-all duration-200 h-[35px]`} 
+            onClick={() => {
+              if (isEditorMaximized) {
+                halfScreenEditorPanel() 
+                setIsEditorMaximized(false)
+              } else {
+                fullScreenEditorPanel() 
+                setIsEditorMaximized(true)
+              }
+            }}>
+            {isEditorMaximized ? (
+              <MessagesSquare className="w-4 h-4 stroke-gray-800" />
+            ) : (
+              <ArrowRight className="w-4 h-4 stroke-gray-800" />
+            )}
+          </Button>
+
+          <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
+            
+            {/* PANELA EDYTORA */}
+            <ResizablePanel 
+              defaultSize={55} 
+              minSize={0}  
+              panelRef={editorPanelRef}  
+              onResize={(size) => {
+                panelSizes.current.editor = size.asPercentage
+                window.dispatchEvent(new CustomEvent('panel-resize'))
+              }} 
+              className="flex flex-col bg-white"
+            >
+              {!isContentLoaded ? (
+                  <div className="flex border-1 border-gray-200 rounded-[6px] w-full h-full items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                          <Button variant="outline" disabled size="sm">
+                            <Spinner data-icon="inline-start" />
+                            Loading...
+                          </Button>
+                      </div>                   
+                  </div>              
+              ) : (
+                <div className={`relative prose prose-slate max-w-none w-full overflow-y-auto flex-1
+                  prose-markers:text-slate-900 border border-gray-200 rounded-[6px] py-2 px-10 
+                  
                   selection:bg-blue-500/30 selection:text-inherit
                   [&_.tiptap]:selection:bg-blue-500/30
 
-                    [&::-webkit-scrollbar]:w-[5px]
-                    [&::-webkit-scrollbar]:h-[5px]
-                    [&::-webkit-scrollbar-track]:bg-gray-100
-                    [&::-webkit-scrollbar-thumb]:bg-gray-300
-                    [&::-webkit-scrollbar-thumb]:rounded-[4px]
-                    `}>
-                    
-                    {/* Zaawansowany system kontroli tabeli */}
-                    {editor && <AdvancedTableControls editor={editor} />}
+                  [&::-webkit-scrollbar]:w-[5px]
+                  [&::-webkit-scrollbar]:h-[5px]
+                  [&::-webkit-scrollbar-track]:bg-gray-100
+                  [&::-webkit-scrollbar-thumb]:bg-gray-300
+                  [&::-webkit-scrollbar-thumb]:rounded-[4px]
+                `}>
+                  {editor && <AdvancedTableControls editor={editor} />}
+                  <EditorContent editor={editor} />
+                </div>
+              )}
+            </ResizablePanel>
 
-                    <EditorContent editor={editor} />
-                  </div>
-                    
-                </ResizablePanel>
+            <ResizableHandle withHandle={true} className="bg-white! w-[9px] hover:bg-blue-100 transition-colors 
+              [&>div]:h-[55px] [&>div]:cursor-col-resize! cursor-col-resize!" />
 
-                {/* --- UCHWYT --- */}
-                {/* Usunąłem sztywną szerokość w-[15px] na rzecz standardowego, ładnego paska shadcn */}
-                <ResizableHandle withHandle={true} className="bg-white! w-[9px]  hover:bg-blue-100  transition-colors 
-                  [&>div]:h-[55px] [&>div]:cursor-col-resize! cursor-col-resize!" />
+            {/* PANEL CHATU AI */}
+            <ResizablePanel 
+              defaultSize={45}
+              minSize={0}
+              onResize={(size) => panelSizes.current.ai = size.asPercentage}
+              panelRef={aiChatPanelRef} 
+              className="w-full h-full bg-[#FAFAFA] flex flex-col relative border-1 border-gray-200
+                  [&::-webkit-scrollbar]:w-[5px]
+                  [&::-webkit-scrollbar]:h-[5px]
+                  [&::-webkit-scrollbar-track]:bg-gray-100
+                  [&::-webkit-scrollbar-thumb]:bg-gray-300
+                  [&::-webkit-scrollbar-thumb]:rounded-[4px]              
+              " 
+            >
+              <Chat 
+                editor={editor} 
+                context={aiChatContext}
+                isContentLoaded={isContentLoaded}
+                onResetContext={() => setAiChatContext("No context provided")}  
+                onMaximizePanel={() => {
+                  if (isAiChatMaximized) {
+                    halfScreenAiPanel()
+                    setIsAiChatMaximized(false)
+                  } else {
+                    fullScreenAiPanel()
+                    setIsAiChatMaximized(true)
+                  }
+                }}
+              />
+            </ResizablePanel>
 
-                {/* --- PRAWY PANEL (AI) --- */}
-                <ResizablePanel 
-                  defaultSize={35}
-                  minSize={0}
-                  onResize={(size) => panelSizes.current.ai = size.asPercentage} // AKTUALIZACJA STANU 
-                  panelRef={aiChatPanelRef} 
-                  className={`w-full h-full bg-[#FAFAFA] flex flex-col relative border-1 border-gray-200`} 
-                  // onResize={(size) => setAiChatPanel(size.asPercentage)}
-                >
-                  <Chat 
-                    editor={editor} 
-                    context={aiChatContext}
-                    onResetContext={() => {
-                      setAiChatContext("No context provided")
-                    }}  
-                    onMaximizePanel={() => {
-                      if (isAiChatMaximized) {
-                        halfScreenAiPanel()
-                        setIsAiChatMaximized(false)
-                      } else {
-                        fullScreenAiPanel()
-                        setIsAiChatMaximized(true)
-                      }
-                    }}
-                  />
-                </ResizablePanel>
-
-              </ResizablePanelGroup>
-      </div>
-    
+          </ResizablePanelGroup>
+        </div>
       
+      </div>
     </div>
+
   </div>
+
+  
 
 
   </>

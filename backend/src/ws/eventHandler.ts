@@ -23,7 +23,7 @@ export const eventHandlers: Record<string, eventHandler> = {
         if(!data.editorContent) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
-        // Zapisujemy całe drzewo / content Slate'a w pamięci serwera
+
         room.editorContent = data.editorContent
         room.isDirty = true
         broadcastToRoom(room, { type: "UPDATE_DOC", editorContent: data.editorContent})
@@ -31,26 +31,21 @@ export const eventHandlers: Record<string, eventHandler> = {
     },
 
     "UPDATE_TITLE": async (ws, room, uuid, data, roomId) => {
-        if (!data.editorTitle) {
-            return ws.send(JSON.stringify({ error: "Payload mismatch"}))
-        };
-        room.editorTitle = data.editorTitle;
+        
+        const MAX_TITLE_LENGTH = 100; // Maksymalna długość tytułu
 
-        try {
-            const [result] = await db
-               .update(project)
-                .set({ title: data.editorTitle })
-                .where(eq(project.id, roomId))
-                .returning()
-
-            console.log("nowy tytuł: ", result);
-            if(!result) return ws.send(JSON.stringify({ error: "Coulnd't update the title"})) 
-            
-            broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: result.title, uuid: uuid });
-        } catch (err) {
-            console.error("Error updating title in db", err);
-            return ws.send(JSON.stringify({ error: "Error updating title in db"})) 
+        if(typeof data.editorTitle !== 'string' || data.editorTitle.length > MAX_TITLE_LENGTH) {
+            return ws.send(JSON.stringify({ 
+                error: 'Title must be a string and cannot exceed 100 characters.',
+                success: false
+            }))
         }
+
+        room.editorTitle = data.editorTitle;
+        room.isDirty = true
+
+        console.log("zmiana tytułu z backa");
+        broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: data.editorTitle, uuid: uuid });
     },
 
     "UPDATE_CHAT": async (ws, room, uuid, data, roomId) => {

@@ -332,3 +332,21 @@ div[data-resize-image-ui="position-controller"] {
     @apply font-sans;
     }
 }
+
+
+
+
+@keyframes face-down {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-face-down {
+  animation: face-down 0.35s ease-out backwards;
+}
