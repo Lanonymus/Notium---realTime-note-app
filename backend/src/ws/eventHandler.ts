@@ -2,16 +2,16 @@ import type { Room } from "./ws.js"
 import { broadcastToRoom } from "./helperFunctions.js"
 import { WebSocket } from "ws"
 import { db } from "../db/db.js"
-import { project } from "../db/schema.js"
+import { projects } from "../db/schema.js"
 import { eq } from "drizzle-orm"
 import { sql } from "drizzle-orm"
 import { v4 as uuidv4, v4 } from 'uuid';
 
 // --- STRATEGIA OBSŁUGI WIADOMOŚCI WZGLĘDEM FLAGI ---
-type eventHandler = (ws: WebSocket, room: Room, uuid: string, data: any, roomId: number) => void
+type eventHandler = (ws: WebSocket, room: Room, uuid: string, data: any, roomID: string) => void
 
 export const eventHandlers: Record<string, eventHandler> = {
-    "UPDATE_CURSOR": (ws, room, uuid, data, roomId) => {
+    "UPDATE_CURSOR": (ws, room, uuid, data, roomID) => {
         if(!data.state || !room.users[uuid]) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
@@ -19,7 +19,7 @@ export const eventHandlers: Record<string, eventHandler> = {
         broadcastToRoom(room, { type: "UPDATE_CURSOR", uuid: uuid, state: data.state})
     },
 
-    "UPDATE_DOC": async (ws, room, uuid, data, roomId) => {
+    "UPDATE_DOC": async (ws, room, uuid, data, roomID) => {
         if(!data.editorContent) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
@@ -30,7 +30,7 @@ export const eventHandlers: Record<string, eventHandler> = {
 
     },
 
-    "UPDATE_TITLE": async (ws, room, uuid, data, roomId) => {
+    "UPDATE_TITLE": async (ws, room, uuid, data, roomID) => {
         
         const MAX_TITLE_LENGTH = 100; // Maksymalna długość tytułu
 
@@ -48,7 +48,7 @@ export const eventHandlers: Record<string, eventHandler> = {
         broadcastToRoom(room, { type: 'UPDATE_TITLE', editorTitle: data.editorTitle, uuid: uuid });
     },
 
-    "UPDATE_CHAT": async (ws, room, uuid, data, roomId) => {
+    "UPDATE_CHAT": async (ws, room, uuid, data, roomID) => {
         if(!data.message) {
             return ws.send(JSON.stringify({ error: "Payload mismatch"}))
         }
@@ -63,11 +63,11 @@ export const eventHandlers: Record<string, eventHandler> = {
 
         try {
             const [result] = await db
-               .update(project)
+               .update(projects)
                 .set({
-                    chatMessages: sql`${project.chatMessages} || ${JSON.stringify([newChatMessage])}::jsonb`
+                    chatMessages: sql`${projects.chatMessages} || ${JSON.stringify([newChatMessage])}::jsonb`
                 })
-                .where(eq(project.id, roomId))
+                .where(eq(projects.id, roomID))
                 .returning()
 
             if(!result) return ws.send(JSON.stringify({ error: "Coulnd't add an message"})) 
@@ -84,7 +84,7 @@ export const eventHandlers: Record<string, eventHandler> = {
         }
     },
     
-    "FULL_STATE": (ws, room, uuid, data, roomId) => {
+    "FULL_STATE": (ws, room, uuid, data, roomID) => {
         ws.send(JSON.stringify({
             type: "FULL_STATE",
             users: room.users,

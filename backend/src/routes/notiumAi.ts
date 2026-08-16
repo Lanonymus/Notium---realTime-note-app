@@ -2,6 +2,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import dotenv from "dotenv"
 import express from "express"
 import { Request, Response } from "express"
+import { wsArcjet } from "../arcjet.js";
+import SafeParseJson from "../validation/SafeParseJson.js";
+import { db } from "../db/db.js";
+import { chats } from "../db/schema.js";
+import { v4 as uuidv4 } from "uuid";
 
 dotenv.config()
 
@@ -60,7 +65,7 @@ const GenAi = new GoogleGenerativeAI(API_KEY!)
 
 Router_AI.post("/ask-ai", async (req: Request, res: Response) => {
     try {
-        const { contextContent, userPrompt, type } = req.body
+        const { contextContent, userPrompt, type, projectID, messages } = req.body
         let systemInstruction = ``
 
         // Szybki i tani model gemini flash 2.5
@@ -114,10 +119,44 @@ Router_AI.post("/ask-ai", async (req: Request, res: Response) => {
             });
 
             const responseText = result.response.text();
-            const metadata = JSON.parse(responseText);
+            
+            try {
+                // wyciągamy wszystko pomiędy klamrami { } - oczyszczamy od zbędnych znaków
+                // To zignoruje jakikolwiek tekst przed i po JSON-ie.
+                const chatTitleID = uuidv4()
+                const parsedData = SafeParseJson(responseText)
 
-            // Odsyłamy jeden gotowy obiekt JSON
-            return res.status(200).json(metadata);
+
+                const metaData = {  
+                    id: chatTitleID,
+                    title: parsedData.title || "Nowy czat",
+                    emoji: parsedData.emoji || "💬" 
+                }
+
+                console.log("projectID: ", projectID);
+                
+                await db.insert(chats).values({
+                    id: chatTitleID,
+                    title: parsedData.title,
+                    projectID: projectID,
+                    emoji: parsedData.emoji,
+                    messages: messages
+                })
+
+                return res.status(200).json(metaData)
+
+            } catch (parseError) {
+                console.error("Błąd parsowania JSON od AI. Surowa odpowiedź modelu:", responseText);
+                
+                // Bezpieczny fallback - jeśli AI całkiem zepsuje odpowiedź, 
+                // zwracamy domyślne dane, żeby aplikacja nie wybuchła.
+                return res.status(200).json({ 
+                    id: uuidv4(),
+                    emoji: "💬", 
+                    title: "Nowy czat" 
+                });
+            }
+        
         }
 
         // -------------------------------------------------------------

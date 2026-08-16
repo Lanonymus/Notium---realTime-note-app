@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Maximize2, ArrowRight, FolderOpen, Mic, Paperclip, ArrowUp, FileType, X, Lightbulb, Brain, BookOpen, SearchCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown"
@@ -20,12 +20,22 @@ import ChatHistory from "./ChatHistory";
 
 type ChatMessage = {
   id: string,
+  role: "user" | "chat",
   content: string,
-  role: string,
-  context: string
+  context: string,
+  timestamp?: string
+}
+
+type Chat = {
+  id: string,
+  title: string,
+  emoji: string,
+  messages: ChatMessage[],
+  createdAt: string
 }
 
 type ChatProps = {
+  projectID: string | undefined,
   editor: Editor,
   context: string,
   isContentLoaded: boolean,
@@ -33,68 +43,20 @@ type ChatProps = {
   onMaximizePanel: () => void,
 }
 
-type ChatMetaData = {
-  id: string,
-  emoji: string,
-  title: string
-}
 
 
-export default function Chat({ editor, context, isContentLoaded, onResetContext, onMaximizePanel }: ChatProps ) {
+
+export default function Chat({ projectID, editor, context, isContentLoaded, onResetContext, onMaximizePanel }: ChatProps ) {
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+    const [allChats, setAllChats] = useState<Chat[]>([])
     const [userPrompt , setUserPrompt] = useState<string>("")
     const [isAiThinking, setIsAiThinking] = useState<boolean>(false)
     const [isGenerating, setIsGenerating] = useState<boolean>(false)
     const [isChatHistoryVisible, setIsChatHistoryVisible] = useState<boolean>(false)
     const abortControllerRef = useRef<AbortController | null>(null)
-    const isFirstMessage = chatMessages.length === 0;
-    const [chatHistory, setChatHistory] = useState<ChatMetaData[]>([]); // Stan dla historii czatów
+    const [currentChatID, setCurrentChatID] = useState<string | null>(null);
 
-
-    const handleGenerateChatHistory = async (userPrompt: string, context: string) => {
-      try {
-
-          const response = await fetch("http://localhost:8000/api/ask-ai", {
-              method: "POST",
-              headers: {
-                  "Content-Type": "application/json",
-              },
-              // Przekazujemy sygnał kontrolera do żądania
-              body: JSON.stringify({
-                  userPrompt: userPrompt,
-                  contextContent: context,
-                  type: "GENERATE_TITLE"
-              })
-          }); 
-          
-          if(!response.ok) {
-            throw new Error("Problem z odpowiedzią serwera przy generowaniu historii czatu");
-          }
-
-          const data = await response.json()
-          
-          if(typeof data.emoji !== "string" || typeof data.title !== "string") {
-            throw new Error("Malformed format of response for title from chat")
-          }
-          const chatTitleID = uuidv4();
-          const chatTitle: ChatMetaData = {
-            id: chatTitleID,
-            emoji: data.emoji,
-            title: data.title
-          }
-
-          // data ma teraz postać: { emoji: "🌿", title: "Mit arkadyjski i jego ewolucja" }
-          console.log("Wygenerowane metadane:", data.emoji, data.title);     
-          setChatHistory(prev => [...prev, chatTitle])     
-          
-
-          
-      } catch (error) {
-        console.log("Error generating chat history:", error);
-      }
-    }
-    
-
+  
 
 
     const handleGenerateContent = async () => {
@@ -108,22 +70,32 @@ export default function Chat({ editor, context, isContentLoaded, onResetContext,
 
         if (!userPrompt.trim()) return; // Zabezpieczenie przed pustym tekstem
 
-        const msgId = uuidv4();
-        const userNewMessage = {
-            id: msgId,
-            content: userPrompt,
-            role: "user",
-            context: context !== "No context provided" ? context : "No context provided"
-        };
-
-        setChatMessages(prev => [...prev, userNewMessage]);
+        
         const currentPrompt = userPrompt;
+        const currentContext = context !== "No context provided" ? context : editor.getText();
         setUserPrompt("");
 
-        // przyszłe id dla wiadomości bota
-        const aiMsgId = uuidv4();
 
+        const userNewMessage: ChatMessage = {
+            id: uuidv4(),
+            role: "user",
+            content: userPrompt,
+            context: currentContext
+        };
 
+        // Dodajemy pustą wiadomość od chata do tablicy, którą za chwilę zapełnimy streamem
+        const aiMsgID = uuidv4()
+        const aiNewMessage: ChatMessage = {
+            id: aiMsgID,
+            role: "chat",                
+            content: "",
+            context: "No context provided"
+        };        
+
+    
+        // lokalne wiadomości - potem po strumieniowaniu zaktualizuje ai wiadomość
+        const updatedMessages = [...chatMessages, userNewMessage, aiNewMessage]
+        setChatMessages(updatedMessages)
 
         try {
             // 1. WŁĄCZAMY MYŚLENIE OD RAZU (Zanim ruszy zapytanie sieciowe)
@@ -158,8 +130,8 @@ export default function Chat({ editor, context, isContentLoaded, onResetContext,
             // Wyłączamy spinner "Thinking..." w momencie, gdy przypływa pierwszy bajt danych
             setIsAiThinking(false);
 
-            // Dodajemy pustą wiadomość od chata do tablicy, którą za chwilę zapełnimy streamem
-            setChatMessages(prev => [...prev, { id: aiMsgId, content: "", role: "chat", context: "No context provided"}]);
+
+            // setChatMessages(prev => [...prev, aiNewMessage]);
 
             // Odbieramy strumień danych z body odpowiedzi
             const reader = response.body?.getReader();
@@ -183,9 +155,88 @@ export default function Chat({ editor, context, isContentLoaded, onResetContext,
                 // Szukamy w stanie wiadomości o id: aiMsgId i aktualizujemy jej treść
                 setChatMessages(prev =>
                     prev.map(msg =>
-                    msg.id === aiMsgId ? { ...msg, content: accumulatedText } : msg
+                    msg.id === aiMsgID ? { ...msg, content: accumulatedText } : msg
                     )
             )}
+
+            // aktualizujemy zestrumieniowany content do pustej wiadomości chatu z api
+            const finalMessages = updatedMessages.map(msg => 
+              msg.id === aiMsgID ? {...msg, content: accumulatedText} : msg
+            )
+      
+
+            // Strzał do api i generowanie obiektu czatu i tytułu
+            if(!currentChatID) {
+              const titleResponse = await fetch("http://localhost:8000/api/ask-ai", {
+                  method: "POST",
+                  headers: {
+                      "Content-Type": "application/json",
+                  },
+                  // Przekazujemy sygnał kontrolera do żądania
+                  body: JSON.stringify({
+                      userPrompt: userPrompt,
+                      contextContent: context,
+                      projectID: projectID,
+                      messages: finalMessages,
+                      type: "GENERATE_TITLE"
+                  })
+              }); 
+              
+              if(!titleResponse.ok) {
+                throw new Error("Problem z odpowiedzią serwera przy generowaniu historii czatu");
+              }
+
+              const data = await titleResponse.json()
+              
+              if( typeof data.emoji !== "string" || 
+                  typeof data.title !== "string" ||
+                  typeof data.id !== "string"
+                ) {
+                throw new Error("Malformed format of response for title from chat")
+              }
+              const chatTitleID = data.id;
+              const chat: Chat = {
+                id: chatTitleID,
+                emoji: data.emoji,
+                title: data.title,
+                messages: finalMessages,
+                createdAt: new Date().toISOString()
+              }
+
+              console.log("chat ID: ", chatTitleID);
+
+              // data ma teraz postać: { emoji: "🌿", title: "Mit arkadyjski i jego ewolucja" }
+              console.log("Wygenerowane metadane:", data.emoji, data.title);     
+
+              setAllChats(prev => [...prev, chat])
+              setCurrentChatID(chatTitleID);
+
+          } else {
+
+              // aktualizowanie wiadomości w instancji czatu z poziomu api
+              const updateChat = await fetch("http://localhost:8000/api/updateChat", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  projectID: projectID,
+                  chatID: currentChatID,
+                  updatedMessages: finalMessages
+                })
+              })
+
+              if(!updateChat.ok) {
+                throw new Error("Aktualizacja wiadomości w chacie nie powiodła się")
+              } else {
+                console.log("Sukces w aktualizacji chatu");
+                
+              }
+            // inaczej aktualizujemy wiadomości w tym chacie po prostu jeśli nie generujemy tytułu
+            setAllChats(prev => 
+              prev.map(chat => chat.id === currentChatID ? {...chat, messages: finalMessages} : chat)
+            )
+          }
         
         } catch (error: any) {
             setIsAiThinking(false);
@@ -193,6 +244,7 @@ export default function Chat({ editor, context, isContentLoaded, onResetContext,
                 console.log("Strumieniowanie przerwane przez użytkownika.");
             }
             console.error("Error during generating content:", error);
+
         } finally {
         // 2. WYŁĄCZAMY MYŚLENIE ZAWSZE (Zarówno przy sukcesie, jak i przy błędzie sieci)
             setIsAiThinking(false)
@@ -200,31 +252,96 @@ export default function Chat({ editor, context, isContentLoaded, onResetContext,
             onResetContext()
             abortControllerRef.current = null
             
-            const fetchContext = context !== "No context provided" ? context : editor.getText()
-            if(isFirstMessage) {
-              handleGenerateChatHistory(userPrompt, fetchContext)
-            }
         }
     };
+
+
+    const loadNewChatMessages = (selectedChatID: string) => {
+      const newChatMessges = allChats.find(chat => chat.id === selectedChatID)?.messages || [];
+      setChatMessages(newChatMessges);
+      console.log("Loaded new chat Messages: ", newChatMessges);
+      console.log("current ID: ", selectedChatID);
+    }
+
+
+    // Usuwanie chatu
+    const deleteChat = async (chatID: string) => {
+
+      try {
+        if(!chatID) return 
+
+        const response = await fetch(`http://localhost:8000/api/deleteChat?chatID=${chatID}`, {
+          method: "POST",
+          credentials: "include"
+        })
+        
+        if(!response.ok){
+          throw new Error(`Problem z usunięciem czatu:  ${chatID}`);
+        }     
+        
+        setAllChats(prevChats => prevChats.filter(chat => chat.id !== chatID))
+        startNewChat()
+        console.log("Pomyślnie usunięto chat");
+
+        
+      } catch (error) {
+        console.log("problem z usunięciem chatu: ", error);
+        
+      }      
+    }
 
 
     const startNewChat = () => {
       setChatMessages([]);
       setUserPrompt("");
-      setIsAiThinking(false);
-      setIsGenerating(false);
       onResetContext();
       setIsChatHistoryVisible(false);
+      setCurrentChatID(null); // Generujemy nowe ID dla nowego czatu
     }
+
+    // Pobieranie chatów
+    const getAllChats = async() => {
+      try {
+        if(!projectID) return
+
+        const response = await fetch(`http://localhost:8000/api/getAllChats?projectID=${projectID}`, {
+          method: "GET",
+          credentials: "include"
+        })
+        
+        if(!response.ok){
+          throw new Error("Problem z pobraniem czatów");
+        }     
+        
+        const result = await response.json()
+        console.log("załadowane chaty: ", result);
+        
+        if(result && Array.isArray(result.data)) {
+          setAllChats(result.data)
+        }
+        
+      } catch (error) {
+        console.log("problem z pobraniem chatów: ", error);
+        
+      }
+    }
+
+
+    // ładowanie wszystkich chatów z backendzu przy pierwszym renderze
+    useEffect(() => {
+      getAllChats()      
+    }, [])
+
+
 
     return (
         <>
           {/* Górny pasek nawigacyjny (Expand & Hide) */}
-          <Button variant={"outline"} className={"py-4 absolute top-4 left-4 z-999"} onClick={onMaximizePanel}>
+          <Button variant={"outline"} className={"py-4 absolute top-4 left-4 z-10"} onClick={onMaximizePanel}>
             <Maximize2 className="w-4 h-4 stroke-gray-800" />
           </Button>  
 
-          <Button variant={"outline"} className={"py-4 absolute top-4 left-16 z-999"} 
+          <Button variant={"outline"} className={"py-4 absolute top-4 left-16 z-10"} 
             onClick={() => setIsChatHistoryVisible(prev => !prev)}>
             <FolderOpen  className="w-4 h-4 stroke-gray-800" />
           </Button>            
@@ -232,14 +349,27 @@ export default function Chat({ editor, context, isContentLoaded, onResetContext,
         
 
           {isChatHistoryVisible ? (
-            <ChatHistory onNewChat={() => startNewChat()} chatHistory={chatHistory} />
+            <ChatHistory 
+              activeChatId={currentChatID} 
+              onSelectChat={(selectedChatID) => {
+                loadNewChatMessages(selectedChatID)
+                setCurrentChatID(selectedChatID)
+
+                setTimeout(() => {
+                  setIsChatHistoryVisible(false)
+                }, 0);
+              }} 
+              onDeleteChat={(chatIdToDelete: string) => deleteChat(chatIdToDelete)}
+              onNewChat={() => startNewChat()} 
+              allChats={allChats} 
+            />
           ) : chatMessages.length > 0 ? (
           <div className="w-full h-full flex flex-col  items-center mt-15 max-h-full overflow-y-hidden bg-slate-50/50" style={{ fontFamily: 'var(--font-Geist)' }}>
             
             {/* Obszar wiadomości - przewijany */}  
             <MessageScrollerProvider autoScroll>
-              <MessageScroller className="w-full h-full min-w-[150px] justify-center items-center">
-                  <MessageScrollerViewport className="w-full h-full  flex px-6 pt-8 space-y-8 
+              <MessageScroller className="w-full h-full justify-center min-w-[150px]">
+                  <MessageScrollerViewport className="w-full h-full justify-center  flex px-6 pt-8 space-y-8 
                     [&::-webkit-scrollbar]:w-[4px] 
                     [&::-webkit-scrollbar-track]:bg-transparent
                     [&::-webkit-scrollbar-thumb]:bg-gray-200

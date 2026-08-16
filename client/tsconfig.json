@@ -22,7 +22,6 @@
 
     /* Path mapping (Wymagane dla Shadcn) */
     "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }

@@ -5,16 +5,21 @@ import { Server } from "http"
 import { colorList } from "./colorList.js"
 import { broadcastToRoom, getRandomColor } from './helperFunctions.js';
 import { eventHandlers } from './eventHandler.js';
-import jwt from "jsonwebtoken"
+import jwt, { decode } from "jsonwebtoken"
 import dotenv from "dotenv"
 import { db } from '../db/db.js';
-import { project } from '../db/schema.js';
+import { projects } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { wsArcjet } from '../arcjet.js';
 import http from "http"
+import { parseCookie } from "cookie"
 
 dotenv.config()
 
+
+interface AuthenticatedWebsocket extends WebSocket {
+    userId: string
+}
 
 export type Room = {
     connections: Record<string, WebSocket>, // gniazda - sockety
@@ -30,8 +35,8 @@ const JWT_SECRET = process.env.JWT_SECRET || "secret"; // w praktyce wrzucasz w 
 
 
 // Czyszczenie pokoji i użytkowników
-const handleDisconnect = async (roomId: string, uuid: string) => {
-    const room = rooms[roomId]
+const handleDisconnect = async (roomID: string, uuid: string) => {
+    const room = rooms[roomID]
 
     if(!room) return
 
@@ -44,25 +49,25 @@ const handleDisconnect = async (roomId: string, uuid: string) => {
     }
 
     if(Object.keys(room.connections).length === 0) {
-        console.log(`Room ${roomId} is empty. Deleting room from memory`)
+        console.log(`Room ${roomID} is empty. Deleting room from memory`)
 
         // Zapisywanie zmian gdy wszyscy użytkownicy wyjdą
         const roomEditorContent = room.editorContent
         try {
             const [result] = await db
-               .update(project)
+               .update(projects)
                 .set({ editorContent: roomEditorContent })
-                .where(eq(project.id, Number(roomId)))
+                .where(eq(projects.id, roomID))
                 .returning()
 
             console.log("zaktualizowana zawartość: ", result);
-            if(!result) return console.error("Error while saving doc roomId: ", roomId)
+            if(!result) return console.error("Error while saving doc roomId: ", roomID)
             
         } catch (err) {
             return console.error("Error while saving document content", err);             
         }
         // TODO: Zapisywanie zmian w bazie NEON 
-        delete rooms[roomId]
+        delete rooms[roomID]
         return
     }
 
@@ -123,15 +128,13 @@ function initWebSocket(server: Server) {
 
     })
 
-    wss.on("connection", async (ws: WebSocket, req: any) => {
+    wss.on("connection", async (ws: AuthenticatedWebsocket, req: any) => {
         const urlSearchParams = new URLSearchParams(req.url.split("?")[1])
-        const token = urlSearchParams.get("token") as string
-        const roomIdString = urlSearchParams.get("room") as string
-        const roomIdNumber = Number(roomIdString)
+        const roomID = urlSearchParams.get("room") as string
         
 
 
-        if (!roomIdNumber || isNaN(roomIdNumber)) {
+        if (!roomID) {
             ws.send(JSON.stringify({
                 message: "Wrong roomId parameter",
                 type: "ERROR",
@@ -141,26 +144,44 @@ function initWebSocket(server: Server) {
             return; // WAŻNE: Musisz dodać return, żeby funkcja nie poszła dalej!
         }
 
-        let userId: number;
         let username: string;
         try {
-            const decoded = jwt.verify(token, JWT_SECRET) as any;
-            if (!decoded) throw new Error("Invalid token");
-            userId = decoded.userId; // Upewnij się, że w tokenie zapisujesz userId (nie id)
-            username = decoded.username; // Pobieramy imię z tokenu!
+
+            const rawCookieHeader = req.headers.cookie
+
+            if(!rawCookieHeader) {
+                throw new Error("Brak nagłówka Cookie w zapytaniu")
+            }
+            // surowy tekst na token
+            const cookies = parseCookie(rawCookieHeader)
+            const token = cookies.token
+
+            if(!token) {
+                throw new Error("Brak ciasteczka token")
+            }
+
+            const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, username: string};
+            ws.userId = decoded.userId
+            username = decoded.username
+
+            console.log(`[WS] Połączono i zautoryzowano użytkownika: ${ws.userId}`);
+
 
         } catch (error) {
-            console.error("Coulnd't process token")
-            ws.close()
-            return
+            console.error(`[WS] Odmowa połączenia: ${error}`);
+                
+            // Jeśli token jest zły/wygasł lub brakuje ciasteczka, zamykamy gniazdo.
+            // Kod 4001 lub 1008 oznacza błąd autoryzacji / naruszenie polityki.
+            ws.close(4001, "Unauthorized");
+            return;
         }
 
         // Weryfikacja w bazie danych - Neon
         try {
             const [dbProject] = await db
                 .select()
-                .from(project)
-                .where(eq(project.id, roomIdNumber))
+                .from(projects)
+                .where(eq(projects.id, roomID))
         
             // Jeśli projektu nie ma w bazie danych -> ODRZUCAMY POŁĄCZENIE
             if (!dbProject) {
@@ -178,8 +199,8 @@ function initWebSocket(server: Server) {
             //     return;
             // }
 
-            if(!rooms[roomIdString]) {
-                rooms[roomIdString] = {
+            if(!rooms[roomID]) {
+                rooms[roomID] = {
                     connections: {},
                     users: {},
                     chatMessages: [],
@@ -188,7 +209,7 @@ function initWebSocket(server: Server) {
                 }
             }
 
-            const room = rooms[roomIdString]
+            const room = rooms[roomID]
             const uuid = uuidv4();
             const color = getRandomColor(colorList, room);
 
@@ -222,7 +243,7 @@ function initWebSocket(server: Server) {
 
                     const handler = eventHandlers[data.type]
                     if (handler) {
-                        handler(ws, room, uuid, data, roomIdNumber)
+                        handler(ws, room, uuid, data, roomID)
                     } else {
                         console.warn(`Unknown event type: ${data.type}`)
                     }
@@ -233,10 +254,10 @@ function initWebSocket(server: Server) {
             })
 
             // Obsługa rozłączeń
-            ws.on("close", () => handleDisconnect(roomIdString, uuid))
+            ws.on("close", () => handleDisconnect(roomID, uuid))
             ws.on("error", (error) => {
                 console.error("WebSocket error: ", error)
-                handleDisconnect(roomIdString, uuid)
+                handleDisconnect(roomID, uuid)
             })
 
         } catch (error) {
@@ -253,8 +274,8 @@ setInterval(async () => {
     if(activeRoomIds.length === 0) return
 
     // Jeżeli są aktywne pokoje
-    for(const roomId of activeRoomIds) {
-        const room = rooms[roomId]
+    for(const roomID of activeRoomIds) {
+        const room = rooms[roomID]
 
         if(room && room.isDirty) {
 
@@ -267,18 +288,18 @@ setInterval(async () => {
             
             try {
                 await db
-                .update(project)
+                .update(projects)
                 .set({
                     title: projectTitle ? projectTitle : "",
                     editorContent: contentToSave
                 })
-                .where(eq(project.id, Number(roomId)))
+                .where(eq(projects.id, roomID))
                 .returning()
 
-                console.log(`💾 [Auto-Save] Pokój ID: ${roomId} pomyślnie zrzucony do bazy supabase.`);
+                console.log(`💾 [Auto-Save] Pokój ID: ${roomID} pomyślnie zrzucony do bazy supabase.`);
             } catch (error) {
                 room.isDirty = true
-                console.error(`❌ [Auto-Save] Błąd zapisu pokoju ID: ${roomId}:`, error);
+                console.error(`❌ [Auto-Save] Błąd zapisu pokoju ID: ${roomID}:`, error);
             }
         }
     }

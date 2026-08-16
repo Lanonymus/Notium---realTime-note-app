@@ -12,7 +12,7 @@ import TextAlign from "@tiptap/extension-text-align"
 import setImageAlignment from "./ImagePositioning";
 import { CustomRemoteCursors } from "./extensions/CustomRemoteCursors";
 import { CustomHighlight } from "./extensions/CustomHighlight";
-import ToolBar from "./components/ToolBar";
+import ToolBar from "./components/Toolbar/ToolBar";
 import { useEditorWebSocket } from "./hooks/useEditorWebSocket";
 import BubbleMenuText from "./components/BubbleMenuText";
 import { KeyBoardShortcuts } from "./extensions/KeyBoardShortcuts";
@@ -36,12 +36,7 @@ import FontFamily from "@tiptap/extension-font-family"
 import { FontSize } from "./extensions/FontSize";
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-
-type TipTapEditorProps = {
-  roomId: number | null,
-  token: string | null
-}
-
+import { useParams} from "react-router-dom"
 type CursorData = {
   from: number,
   to: number,
@@ -55,7 +50,9 @@ type AiContextRange = {
   to: number
 }
 
-function TipTapEditor({ roomId, token} : TipTapEditorProps) {
+function TipTapEditor() {
+  const params = useParams() 
+  const projectID: string | undefined = params.projectID
   const lastCursorSendTime = useRef<number>(0)
   const cursorTimeOutLastUpdate = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [remoteCursors, setRemoteCursors] = useState<Record<string, CursorData>>({})  
@@ -280,8 +277,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
     { 
       editor,
       setTitle,
-      roomId,
-      token,
+      projectID,
       setRemoteCursors
     }
   )
@@ -386,7 +382,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
     
     {editor && (
       <BubbleMenu
-        className="z-999"
+        className="z-3"
         editor={editor}
         // Dynamicznie zmieniamy pozycję: standardowe menu nad tekstem (top), menu AI pod tekstem (bottom-start)
         options={{ 
@@ -543,7 +539,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
   )}
     
 
-{/* 1. GŁÓWNY KONTENER: Usunięto pb-35, dodano overflow-hidden */}
+{/* 1. GŁÓWNY KONTENER*/}
   <div className="h-screen w-screen flex flex-col bg-white overflow-hidden relative">
 
 
@@ -589,7 +585,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
           
           <Button 
             variant={"outline"} 
-            className={`absolute z-999 top-[0px] right-[0px] mt-4 ${isEditorMaximized ? "mr-8" : "mr-4"} transition-all duration-200 h-[35px]`} 
+            className={`absolute z-10 top-[0px] right-[0px] mt-4 ${isEditorMaximized ? "mr-8" : "mr-4"} transition-all duration-200 h-[35px]`} 
             onClick={() => {
               if (isEditorMaximized) {
                 halfScreenEditorPanel() 
@@ -665,6 +661,7 @@ function TipTapEditor({ roomId, token} : TipTapEditorProps) {
               " 
             >
               <Chat 
+                projectID={projectID}
                 editor={editor} 
                 context={aiChatContext}
                 isContentLoaded={isContentLoaded}

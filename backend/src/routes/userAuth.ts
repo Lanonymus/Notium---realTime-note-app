@@ -7,7 +7,10 @@ import { userRegisterSchema, userLoginSchema } from '../validation/users.js';
 import { users } from '../db/schema.js';
 import dotenv from "dotenv"
 import { eq } from 'drizzle-orm';
-import { JwtPayload } from 'jsonwebtoken';
+import {v4 as uuidv4} from "uuid"
+import AuthTokenMiddleware from '../controllers/AuthTokenMiddleware.js';
+import { Request, Response } from "express"
+import { success } from 'zod';
 
 dotenv.config()
 
@@ -32,18 +35,28 @@ userRouter.post("/register", async (req, res) => {
     const passwordHash = await bcrypt.hash(parsedData.data.password, SALT_ROUNDS);
 
     const [ user ] = await db.insert(users).values({
+        id: uuidv4(),
         username: parsedData.data.username,
         email: parsedData.data.email,
         passwordHash: passwordHash
     }).returning();
 
-    const jwtToken = jwt.sign({ userId: user.id }, JWT_SECRET, {   expiresIn: "7d" });
+    const token = jwt.sign({ userId: user.id, username: parsedData.data.username }, JWT_SECRET, {   expiresIn: "7d" });
+
+    // res.cookie(nazwa, wartość, [opcje])
+    res.cookie("token", token, {
+      httpOnly: true, // zabezpiecza przed inject XSS kodem od hackerów na frontendzie hacker nie ma dostępu do cookie (cross-site scripting)
+      secure: process.env.NODE_ENV === "production", // na produkcji wymaga protokołu HTTPS - secure
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // czas życia cookie - 7 dni
+      path: "/" // żeby na wszystkich endpointach było widoczne
+    })
 
     res.status(201).json({ 
       success: true, 
       message: "Created user", 
       userId: user.id, 
-      token: jwtToken, 
+      token: token, 
       flag: "CREATED_USER"});
  
   } catch (error: any) {
@@ -71,6 +84,7 @@ userRouter.post("/register", async (req, res) => {
 // Logowanie
 userRouter.post("/login", async (req, res) => {
   const parsedData = userLoginSchema.safeParse(req.body)
+  
 
   if(!parsedData.success) {
     return res.status(400).json({ 
@@ -103,7 +117,25 @@ userRouter.post("/login", async (req, res) => {
         success: false 
     })}
 
-    const token = jwt.sign({ userId: user.id, username: user.username}, JWT_SECRET, { expiresIn: '7d'})
+    // generowanie tokenu na 7 dni
+    const token = jwt.sign(
+      { 
+        userId: user.id, 
+        username: user.username
+      },
+      JWT_SECRET, 
+      { expiresIn: '7d'}
+    )
+
+    // res.cookie(nazwa, wartość, [opcje])
+    res.cookie("token", token, {
+      httpOnly: true, // zabezpiecza przed inject XSS kodem od hackerów na frontendzie hacker nie ma dostępu do cookie (cross-site scripting)
+      secure: process.env.NODE_ENV === "production", // na produkcji wymaga protokołu HTTPS - secure
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // czas życia cookie - 7 dni
+    })
+
+
     return res.status(201).json({ 
       message: "Login successful",
       flag: "LOGIN_SUCCESS",
@@ -122,42 +154,19 @@ userRouter.post("/login", async (req, res) => {
 });
 
 
+
+
 // Verifying data fetch request
-userRouter.get("/getUserData", (req, res) => {
-  const token = req.headers["authorization"]
+userRouter.get("/getUserData", AuthTokenMiddleware, async (req: Request, res: Response) => {
 
-  // Błędny token lub brak
-  if(!token) return res.status(401).json({ 
-    message: "Not a valid token", 
-    flag: "INVALID_TOKEN",
-    success: false 
-  })
-
-  jwt.verify(token, JWT_SECRET, async (error, decoded) => {
-    if(error) {
-      return res.status(401).json({ 
-        message: "Not a valid token",
-        flag: "INVALID_TOKEN",
-        success: false 
-      })
-    }
-
-    const decodedPayload = decoded as JwtPayload & { userId?: number };
-    const decodedId = decodedPayload.userId;
-
-    if (!decodedId) {
-      return res.status(401).json({ 
-        message: "Problem with conversion",
-        flag: "JWT_CONVERSION_ERROR",
-        success: false 
-      })
-    }
+  const userId = req.userId
+  if(!userId) return res.status(401).json({ success: false, message: "Brak userId"})
 
     try {
       const [data] = await db
         .select()
         .from(users)
-        .where(eq(users.id, decodedId))
+        .where(eq(users.id, userId))
 
       if (!data) {
         return res.status(404).json({ 
@@ -182,7 +191,6 @@ userRouter.get("/getUserData", (req, res) => {
         success: false
       })
     }
-})
 });
 
 

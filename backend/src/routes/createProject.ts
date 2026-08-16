@@ -2,7 +2,8 @@ import express from 'express'
 import jwt from 'jsonwebtoken'
 import type { JwtPayload } from 'jsonwebtoken';
 import { db } from '../db/db.js';
-import { project } from '../db/schema.js';
+import { projects } from '../db/schema.js';
+import { v4 as uuidv4 } from "uuid"
 
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret"; // w praktyce wrzucasz w .env
@@ -29,8 +30,8 @@ projectRouter.post("/project", (req, res) => {
             })
         }
 
-        const decodedPayload = decoded as JwtPayload & { userId?: number };
-        const decodedId = decodedPayload.userId;
+        const decodedPayload = decoded as JwtPayload;
+        const decodedId = decodedPayload.userId as string;
 
         if (!decodedId) {
             return res.status(401).json({ 
@@ -42,7 +43,8 @@ projectRouter.post("/project", (req, res) => {
 
         
         try {
-            const [result] = await db.insert(project).values({
+            const [result] = await db.insert(projects).values({
+                id: uuidv4(),
                 title: "New Project",
                 editorContent: {},
                 chatMessages: [],
