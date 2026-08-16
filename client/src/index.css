@@ -13,6 +13,7 @@ body {
     overflow-x: hidden;
 }
 
+
 /* Styl dla każdego obrazka w edytorze */
 .ProseMirror img {
   cursor: pointer;

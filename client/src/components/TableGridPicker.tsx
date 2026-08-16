@@ -35,7 +35,7 @@ export default function TableGridPicker({
   }
 
   return (
-    <div className="p-2 bg-white rounded-md flex flex-col items-center gap-2 select-none">
+    <div className="p-2 bg-white rounded-md flex flex-col items-center gap-2 select-none hover:bg-gray-50">
       {/* Dynamiczny napis pokazujący aktualną wielkość, np. 4 x 3 */}
       <div className="text-[12px] font-medium text-gray-500">
         {hoveredGrid.rows > 0 && hoveredGrid.cols > 0 

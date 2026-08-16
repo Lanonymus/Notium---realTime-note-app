@@ -4,11 +4,13 @@ import userRouter from './routes/userAuth.js'
 import initWebSocket from './ws/ws.js'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import projectRouter from './routes/project.js'
+import projectRouter from './routes/createProject.js'
 import { httpArcjetMiddleware } from './arcjet.js'
 import mediaRouter from './routes/uploadMedia.js'
 import deleteImgRouter from './routes/deleteImage.js'
 import Router_AI from './routes/notiumAi.js'
+import chatRouter from './routes/chatAPI.js';
+import cookieParser from "cookie-parser";
 
 
 dotenv.config()
@@ -23,6 +25,8 @@ const HOST = process.env.HOST || "0.0.0.0"
 
 app.set('trust proxy', 1)
 
+
+app.use(cookieParser())
 // Pozwól na żądania z Twojego frontendu i tłumaczenie na JSON
 app.use(cors({
   origin: 'http://localhost:5173', // adres frontendu
@@ -40,6 +44,7 @@ app.use("/api", projectRouter)
 app.use("/api", mediaRouter)
 app.use("/api", deleteImgRouter)
 app.use("/api", Router_AI);
+app.use("/api", chatRouter)
 
 
 

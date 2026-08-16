@@ -3,32 +3,44 @@ import { Plus, MessageSquare, ChevronDown, Clock, Sparkles } from "lucide-react"
 import ChatHistoryItem from "./ChatHistoryItem";
 
 
-type ChatMetaData = {
-  id: string
+
+type ChatMessage = {
+  id: string,
+  role: "user" | "chat",
+  content: string,
+  context: string,
+  timestamp?: string
+}
+type Chat = {
+  id: string,
+  title: string,
   emoji: string,
-  title: string
+  messages: ChatMessage[],
+  createdAt: string
 }
 
 type ChatHistoryProps = {
-  chatHistory: ChatMetaData[];
+  allChats: Chat[];
   onNewChat?: () => void;
   onSelectChat?: (id: string) => void;
-  activeChatId?: string;
+  activeChatId?: string | null;
+  onDeleteChat: (chatId: string) => void;
 };
 
 
 
 export default function ChatHistory({
-  chatHistory,
+  allChats,
   onNewChat,
   onSelectChat,
   activeChatId,
+  onDeleteChat
 }: ChatHistoryProps) {
 
   const [showAll, setShowAll] = useState(false);
 
   // Wyświetlamy 4 elementy domyślnie lub wszystkie po kliknięciu "Pokaż więcej"
-  const visibleChats = showAll ? chatHistory : chatHistory.slice(0, 4);
+  const visibleChats = showAll ? allChats : allChats.slice(0, 4);
 
   return (
     <div className="w-full max-w-[600px] ml-auto mr-auto h-full flex flex-col p-4 justify-between gap-4 mt-11">
@@ -60,7 +72,7 @@ export default function ChatHistory({
             </span>
           </div>
           <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-            {chatHistory.length}
+            {allChats.length}
           </span>
         </div>
 
@@ -69,7 +81,7 @@ export default function ChatHistory({
           {visibleChats.map((chatTitle, index) => {
 
             const isActive = chatTitle.id === activeChatId;
-            console.log("chatTitle:", chatTitle);
+            // console.log("chatTitle:", chatTitle);
             
 
             return (
@@ -79,6 +91,7 @@ export default function ChatHistory({
                 chatTitle={chatTitle.title}
                 isActive={isActive}
                 onSelectChat={onSelectChat}
+                onDeleteChat={onDeleteChat}
                 delay={(index + 1) * 65}
                 emoji={chatTitle.emoji} // Example: different icons for active/inactive chats
               />
@@ -88,7 +101,7 @@ export default function ChatHistory({
       </div>
 
       {/* Dół: Przycisk "View more / Pokaż więcej" */}
-      {chatHistory.length > 4 && (
+      {allChats.length > 4 && (
         <button
           onClick={() => setShowAll(!showAll)}
           className="w-full py-2 px-3 bg-gray-100/70 hover:bg-gray-200/60 text-gray-600 

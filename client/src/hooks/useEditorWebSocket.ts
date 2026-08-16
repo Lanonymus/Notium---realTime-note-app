@@ -5,19 +5,18 @@ import React, { useEffect, useRef, useState } from "react";
 type EditorWebSocketProps = {
     editor: Editor,
     setTitle: (value: string) => void,
-    roomId: number | null,
-    token: string | null,
+    projectID: string | undefined,
     setRemoteCursors: React.Dispatch<React.SetStateAction<Record<string, any>>>
 }
 
-export function useEditorWebSocket({ editor, setTitle, roomId, token, setRemoteCursors}: EditorWebSocketProps) {
+export function useEditorWebSocket({ editor, setTitle, projectID, setRemoteCursors}: EditorWebSocketProps) {
     const socketRef = useRef<WebSocket | null>(null)
     const uuidRef = useRef<string>("")
     const [isContentLoaded, setIsContentLoaded] = useState(false)
 
     useEffect(() => {
-        if(!editor || !roomId || !token) return
-        const wsUrl = `ws://localhost:8000/ws?room=${encodeURIComponent(roomId)}&token=${encodeURIComponent(token)}`;
+        if(!editor || !projectID) return
+        const wsUrl = `ws://localhost:8000/ws?room=${encodeURIComponent(projectID)}`;
 
         const ws = new WebSocket(wsUrl);
 
@@ -129,7 +128,7 @@ export function useEditorWebSocket({ editor, setTitle, roomId, token, setRemoteC
         return () => {
             ws.close()
         }
-    }, [editor, roomId, token])
+    }, [editor, projectID])
 
 
     const sendPayLoad = (payload: object) => {

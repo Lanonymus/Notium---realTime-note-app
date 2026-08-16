@@ -4,12 +4,19 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import JoinRoom from './JoinRoom.js'
 import { TooltipProvider } from "@/components/ui/tooltip.js"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import TipTapEditor from './TiptapEditor.js';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/* <TiptapEditor roomId={1} token={"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTc4MjU3NDg5MSwiZXhwIjoxNzgyNjYxMjkxfQ._qynaHstsNofgdo8LuXvSo7TX5d-5cy4HYvfa7fNKqk"}/> */}
     <TooltipProvider>
-      <JoinRoom />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<JoinRoom/>}/>
+          <Route path="/project/:projectID" element={<TipTapEditor/>}/>
+        </Routes>
+      </BrowserRouter>
     </TooltipProvider>
   </StrictMode>,
 )
