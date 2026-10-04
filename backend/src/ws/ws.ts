@@ -80,7 +80,8 @@ const handleDisconnect = async (roomID: string, uuid: string) => {
 
 // initiating webSocket server
 function initWebSocket(server: Server) {
-    const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 * 5});
+    // Max 10 MB przesyłki
+    const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 * 10});
 
     server.on("upgrade", async (req, socket, head) => {
         console.log(req.headers.upgrade);
@@ -291,7 +292,8 @@ setInterval(async () => {
                 .update(projects)
                 .set({
                     title: projectTitle ? projectTitle : "",
-                    editorContent: contentToSave
+                    editorContent: contentToSave,
+                    updatedAt: new Date()
                 })
                 .where(eq(projects.id, roomID))
                 .returning()

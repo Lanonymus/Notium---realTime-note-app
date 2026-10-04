@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { db } from '../db/db.js'
 import { userRegisterSchema, userLoginSchema } from '../validation/users.js';
-import { users } from '../db/schema.js';
+import { projects, users } from '../db/schema.js';
 import dotenv from "dotenv"
 import { eq } from 'drizzle-orm';
 import {v4 as uuidv4} from "uuid"
@@ -153,46 +153,6 @@ userRouter.post("/login", async (req, res) => {
 
 });
 
+export default userRouter;
 
 
-
-// Verifying data fetch request
-userRouter.get("/getUserData", AuthTokenMiddleware, async (req: Request, res: Response) => {
-
-  const userId = req.userId
-  if(!userId) return res.status(401).json({ success: false, message: "Brak userId"})
-
-    try {
-      const [data] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-
-      if (!data) {
-        return res.status(404).json({ 
-          message: "User not found",
-          flag: "USER_NOT_FOUND",
-          success: false 
-        })
-      }
-
-      return res.status(200).json({
-        message: "User data fetched successfully",
-        data: data,
-        flag: "DATA_FETCHED",
-        success: true
-      })
-
-    } catch (error) {
-      console.error("Error fetching user data", error)
-      return res.status(500).json({
-        message: "Internal server error",
-        flag: "INTERNAL_SERVER_ERROR",
-        success: false
-      })
-    }
-});
-
-
-
-export default userRouter

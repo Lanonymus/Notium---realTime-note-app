@@ -43,6 +43,132 @@
       "when": 1786026754878,
       "tag": "0005_hard_leper_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787950999041,
+      "tag": "0006_ancient_patch",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788182527613,
+      "tag": "0007_sloppy_queen_noir",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788632099972,
+      "tag": "0008_mature_scarlet_spider",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788949600038,
+      "tag": "0009_lethal_sabretooth",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789296869134,
+      "tag": "0010_lethal_ted_forrester",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789764027450,
+      "tag": "0011_short_harpoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790099068692,
+      "tag": "0012_thick_silver_centurion",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790108490226,
+      "tag": "0013_nifty_lord_hawal",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790160720821,
+      "tag": "0014_lush_supreme_intelligence",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1790270575137,
+      "tag": "0015_remarkable_tattoo",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790273482842,
+      "tag": "0016_empty_wallow",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790277249542,
+      "tag": "0017_spicy_lightspeed",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790283446550,
+      "tag": "0018_chief_klaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790331219671,
+      "tag": "0019_long_meggan",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790713893720,
+      "tag": "0020_flashy_wolfpack",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790715038594,
+      "tag": "0021_past_cassandra_nova",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790715100913,
+      "tag": "0022_brave_randall",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791130660295,
+      "tag": "0023_sleepy_stepford_cuckoos",
+      "breakpoints": true
     }
   ]
 }

@@ -526,68 +526,128 @@ export default function Chat({ projectID, editor, context, isContentLoaded, onRe
           // <--------CHAT POCZĄTKOWY - DOMYŚLNY EKRAN DLA STARTU APPLIKACJI-------->
           )
           : (
-          <div className="flex-1 flex flex-col justify-around mt-5 px-6">   
+          
+          <div className="flex-1 flex flex-col justify-around my-3 px-6 bg-gradient-to-b from-slate-50/60 via-blue-50/25 to-slate-50/60 rounded-2xl">   
 
-            <div className="w-full flex flex-col justify-center items-center ">
+            <div className="w-full flex flex-col justify-center items-center">
+              
+
               {/* Nagłówek i opis */}
-              <h1 className="text-[32px] font-bold text-gray-900 mb-3 tracking-tight">
+              <h1 className="text-[32px] font-bold text-gray-900 mb-2 tracking-tight">
                 <Typewriter text={"Hey, I'm Notium✨"} speed={50} delay={0} />
               </h1>
-              <p className="text-gray-500 text-[15px] mb-8 text-center">
+              <p className="text-gray-500 text-[14px] mb-10 text-center max-w-[420px] leading-relaxed">
                 <Typewriter text={"I can work with you on your doc and answer any questions!"} speed={30} delay={1000}/>
               </p>
 
-              {/* Sugerowane dymki (2x2 Grid) */}
-              <div className="w-full max-w-[600px] grid grid-cols-2 gap-3 mb-4">
-                
 
-                {/* Bubble 1: Feynman Technique */}
-                <ChatPremadeItem
-                  icon={<Lightbulb className="w-4 h-4" />}
-                  title="Simplify concepts"
-                  description="Use simple language and analogies"
-                  onClick={() => setUserPrompt("Explain the most complex concepts from the document in a simple and intuitive way.")}
-                  delay={100}
-                />
+              <div className="mb-4 grid w-full max-w-[600px] grid-cols-2 gap-3">
+                {[
+                  {
+                    title: "Simplify concepts",
+                    description: "Use simple language and analogies",
+                    image: "/notesImages/lightBulb.png", // np. "/images/simplify.png"
+                    prompt:
+                      "Explain the most complex concepts from the document in a simple and intuitive way.",
+                    className: "h-[100px]"
+                  },
+                  {
+                    title: "Generate a quiz",
+                    description: "Test your knowledge with questions",
+                    image: "/notesImages/pencil.png", // np. "/images/quiz.png"
+                    prompt:
+                      "Create a short 5-question quiz to test knowledge based on this document.",
+                    className: "h-[100px] rotate-[-30deg] -translate-y-[8px]"
+                  },
+                  {
+                    title: "Key concepts",
+                    description: "Build a clear glossary",
+                    image: "/notesImages/key.png", // np. "/images/concepts.png"
+                    prompt:
+                      "Extract the main definitions from the text and create a concise glossary of key terms.",
+                    className: "!h-[100px] -translate-y-[5px] rotate-[-10deg]"
+                  },
+                  {
+                    title: "Find knowledge gaps",
+                    description: "Check what's missing in your notes",
+                    image: "/notesImages/magnifier.png", // np. "/images/gaps.png"
+                    prompt:
+                      "Analyze our notes and highlight any key information or important topics that are missing.",
+                    className: "h-[100px]"
+                  },
+                ].map((item) => {
+                  const isSelected = userPrompt === item.prompt;
 
-                {/* Bubble 2: Active Recall / Quiz */}
-                <ChatPremadeItem
-                  icon={<Brain className="w-4 h-4" />}
-                  title="Generate a quiz"
-                  description="Test your knowledge with questions"
-                  onClick={() => setUserPrompt("Create a short 5-question quiz to test knowledge based on this document.")}
-                  delay={200}
-                />
+                  return (
+                    <button
+                      key={item.title}
+                      type="button"
+                      onClick={() => setUserPrompt(item.prompt)}
+                      aria-pressed={isSelected}
+                      className={`
+                        group relative flex min-w-0 flex-col
+                        lg:flex-row lg:items-center
+                        gap-2 rounded-[12px] border-2 p-4
+                        text-left outline-none cursor-pointer
+                        focus-visible:ring-2 focus-visible:ring-blue-600
+                        focus-visible:ring-offset-2 active:translate-y-[3px] active:shadow-none
+                        ${
+                          isSelected
+                            ? "border-blue-600 bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300 shadow-[1px_2px_0px_#e5e7eb] bg-white "
+                        }
+                      `}
+                    >
+                      {/* Tekst — może się zawijać */}
+                      <div className="min-w-0 w-full lg:w-auto lg:flex-1">
+                        <h3 className="text-sm font-medium leading-5 text-gray-800">
+                          {item.title}
+                        </h3>
 
-                {/* Bubble 3: Key Concepts / Glossary */}
-                <ChatPremadeItem
-                  icon={<BookOpen className="w-4 h-4" />}
-                  title="Key concepts"
-                  description="Build a clear glossary"
-                  onClick={() => setUserPrompt("Extract the main definitions from the text and create a concise glossary of key terms.")}
-                  delay={300}
-                />
+                        <p className="mt-1 text-xs leading-4 text-gray-500">
+                          {item.description}
+                        </p>
+                      </div>
 
-                {/* Bubble 4: Knowledge Gap Detection */}
-                <ChatPremadeItem
-                  icon={<SearchCheck className="w-4 h-4" />}
-                  title="Find knowledge gaps"
-                  description="Check what's missing in your notes"
-                  onClick={() => setUserPrompt("Analyze our notes and highlight any key information or important topics that are missing.")}
-                  delay={400}
-                />
-
+                      {/* Stałe miejsce na ilustrację — nie kurczy się */}
+                      <div
+                        className="
+                          flex h-[96px] w-[96px] shrink-0
+                          items-center justify-center self-end
+                          lg:self-center
+                        "
+                      >
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt=""
+                            draggable={false}
+                            className={`
+                              block w-auto max-w-full shrink-0 object-contain
+                              transition-transform duration-300
+                              motion-safe:group-hover:-translate-y-1
+                              ${item.className}
+                            `}
+                          />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-            </div>       
-            
 
-            {/* Okno Inputu (Chatbox) */}
-            <div className="w-full max-h-[500px] mr-auto ml-auto max-w-[600px] h-auto bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col p-4">
+
+            </div>       
+
+            {/* Okno Inputu (Chatbox) - Dopracowane ramki i cienie */}
+            <div className="w-full max-h-[500px] mr-auto ml-auto max-w-[600px] h-auto bg-white/90 backdrop-blur-sm
+             border-gray-200/90 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col p-4 transition-all
+              focus-within:border-blue-500 border-[2px] focus-within:shadow-[0_4px_25px_rgba(59,130,246,0.08)]">
               
               {context !== "No context provided" && (
-                <Item variant={"outline"} className="mb-2">
+                <Item variant={"outline"} className="mb-2 bg-slate-50/80 border-slate-200/60">
                   <ItemMedia variant="icon">
-                    <FileType />
+                    <FileType className="text-blue-500" />
                   </ItemMedia>
                   <ItemContent>
                     <ItemTitle>Context</ItemTitle>
@@ -596,7 +656,7 @@ export default function Chat({ projectID, editor, context, isContentLoaded, onRe
                   <ItemActions>
                     <Button variant={"default"} className={"text-[13px] cursor-pointer"} onClick={onResetContext}>Delete</Button>
                   </ItemActions>
-              </Item>
+                </Item>
               )}
 
               {/* Pole tekstowe */}
@@ -604,7 +664,7 @@ export default function Chat({ projectID, editor, context, isContentLoaded, onRe
                 value={userPrompt}
                 onChange={(e) => setUserPrompt(e.target.value)}
                 className="w-full min-h-[60px] max-h-[120px] resize-none outline-none [field-sizing:content]
-                text-gray-700 bg-transparent placeholder:text-gray-400 text-[15px]
+                text-gray-800 bg-transparent placeholder:text-gray-400 text-[15px] leading-relaxed
                   [&::-webkit-scrollbar]:w-[5px]
                   [&::-webkit-scrollbar]:h-[5px]
                   [&::-webkit-scrollbar-track]:bg-gray-100
@@ -621,23 +681,23 @@ export default function Chat({ projectID, editor, context, isContentLoaded, onRe
               />
 
               {/* Dolny pasek narzędzi w inpucie */}
-              <div className="flex justify-between items-center pt-3 border-t border-transparent">
+              <div className="flex justify-between items-center pt-2.5 border-t border-gray-100 mt-1">
                 
                 {/* Lewa strona: Mikrofon */}
-                <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors cursor-pointer">
-                  <Mic className="w-5 h-5" />
+                <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50/80 rounded-xl transition-all cursor-pointer">
+                  <Mic className="w-4 h-4" />
                 </button>
                 
                 {/* Prawa strona: Załącznik i Wyślij */}
-                <div className="flex items-center gap-1">
-                  <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors cursor-pointer">
-                    <Paperclip className="w-[18px] h-[18px]" />
+                <div className="flex items-center gap-1.5">
+                  <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50/80 rounded-xl transition-all cursor-pointer">
+                    <Paperclip className="w-4 h-4" />
                   </button>
                   <button 
                     className={`p-2 rounded-xl transition-all shadow-sm flex items-center justify-center cursor-pointer         
                       ${!isContentLoaded || userPrompt.trim() === "" 
-                        ? "bg-gray-100 text-gray-300 cursor-not-allowed! shadow-none" 
-                        : "bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/10 hover:shadow-lg"}`}
+                        ? "bg-gray-100 text-gray-300 cursor-not-allowed shadow-none" 
+                        : "bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/15 hover:shadow-md"}`}
                     onClick={() => handleGenerateContent()}
                     disabled={!isContentLoaded || userPrompt.trim() === ""}
                   >
@@ -647,7 +707,10 @@ export default function Chat({ projectID, editor, context, isContentLoaded, onRe
               </div>
 
             </div>
-          </div> )}    
+          </div>            
+
+          
+          )}    
           
           
     </>

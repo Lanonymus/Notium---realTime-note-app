@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { PopoverContent } from "@/components/ui/popover"
 import { X, Plus } from "lucide-react"
 import { MAC_COLORS_GRID } from "./MacColorsGrid" // Twój plik z kolorami
@@ -9,18 +9,25 @@ import { getHexWithOpacity } from './getHexWithOpacity';
 
 type ColorPickerPopoverProps = {
   editor: Editor,
-  onClose?: () => void
+  onClose?: () => void,
+  setSelectedColorToolBar?: (color: string) => void,
+  setSelectedHighlightToolBar?: (color: string) => void,
+  side?: "top" | "bottom" | "left" | "right",
+  sideOffset?: number,
+  align?: "start" | "center" | "end"
+  
 }
 
-export const ColorPickerPopover = ({ editor, onClose }: ColorPickerPopoverProps ) => {
+
+export const ColorPickerPopover = ({ editor, onClose, setSelectedColorToolBar, setSelectedHighlightToolBar, side, sideOffset, align }: ColorPickerPopoverProps ) => {
   const [isShowMoreColors, setIsShowMoreColors] = useState<boolean>(false)
   const [selectedColor, setSelectedColor] = useState<string>('#A855F7')
   const [opacity, setOpacity] = useState<number>(100)
   const [isReplaceColorActive, setIsReplaceColorActive] = useState<boolean>(false)
+  const trackRef = useRef<HTMLDivElement>(null)
 
-
-  // Spójna, nowoczesna paleta podstawowa (Row 7 + Soft Dark Gray)
-  const [presets, setPresets] = useState<string[]>([
+  const avaibleColors = setSelectedColorToolBar ? [
+    // TEXT COLORS
     '#FE8C82', // Czerwony / Koralowy (Row 7, col 5)
     '#FEA57D', // Pomarańczowy / Brzoskwiniowy (Row 7, col 6)
     '#FFD978', // Żółty (Row 7, col 8)
@@ -30,7 +37,63 @@ export const ColorPickerPopover = ({ editor, onClose }: ColorPickerPopoverProps 
     '#854FFD', // Fioletowy (Row 7, col 2)
     '#EF729E', // Różowy (Row 7, col 4)
     '#424242', // Ciemnoszary / Tekstowy (Row 0, col 9)
-  ])
+  ] : [
+    // HIGHLIGHT COLORS
+    '#FE8C82FF', // Czerwony / Koralowy (Row 7, col 5)
+    '#FEA57D', // Pomarańczowy / Brzoskwiniowy (Row 7, col 6)
+    '#FFD978', // Żółty (Row 7, col 8)
+    '#CDE8B5FF', // Zielony (Row 7, col 11)
+    '#CBF1FEFF', // Jasnoniebieski / Cyjan (Row 7, col 0)
+    '#D3E2FFFF', // Niebieski (Row 7, col 1)
+    '#DAC9FFFF', // Fioletowy (Row 7, col 2)
+    '#EF729E', // Różowy (Row 7, col 4)
+    '#EFCAFEFF', // Ciemnoszary / Tekstowy (Row 0, col 9)
+  ]
+
+  const handleSliderMove = (clientX: number) => {
+    if (!trackRef.current) return
+    
+    const rect = trackRef.current.getBoundingClientRect()
+
+    // Obliczanie różnicy w pixelach od początku do momentu przeciągnięcia 
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width))
+
+    // Obliczanie procentu
+    const percentage = Math.round((x / rect.width) * 100)
+    
+    if(percentage !== opacity) {
+      setOpacity(percentage)
+      applyColor(selectedColor, percentage)
+    }
+  } 
+
+  // Spójna, nowoczesna paleta podstawowa (Row 7 + Soft Dark Gray)
+  const [presets, setPresets] = useState<string[]>(avaibleColors)
+
+
+  const applyColor = (hexColor: string, currentOpacity: number) => {
+    const currentColor = getHexWithOpacity(hexColor, currentOpacity)
+
+    // Ustawienie lokalnego stanu
+    setSelectedColor(currentColor)
+
+    // jeżeli istnieje możliwość zmiany koloru to  - ustawiamy w toolbarze wyświetlanego koloru
+    if(setSelectedColorToolBar) {
+      setSelectedColorToolBar(currentColor)
+
+      // Zmiana koloru w edytorze na tekście
+      editor.chain().focus().setColor(currentColor).run()
+    }
+
+    // jeżeli istnieje możliwość zmiany highlighta - funkcji to, to robimy wyświetlanego w toolbarze
+    if(setSelectedHighlightToolBar) {
+      setSelectedHighlightToolBar(currentColor)
+
+      // Zmiana koloru highlighta
+      editor.chain().focus().setHighLight({color: currentColor, borderRadius: "0px" }).run()
+    }
+
+  }
 
   const handlePresetClick = (index: number, color: string) => {
 
@@ -42,9 +105,7 @@ export const ColorPickerPopover = ({ editor, onClose }: ColorPickerPopoverProps 
       setIsReplaceColorActive(false)
       
     } else {
-        const currentColor = getHexWithOpacity(color, opacity)
-      setSelectedColor(currentColor)
-      editor.chain().focus().setColor(currentColor).run()
+        applyColor(color, opacity)
     }
   }
 
@@ -57,7 +118,12 @@ export const ColorPickerPopover = ({ editor, onClose }: ColorPickerPopoverProps 
   }
 
   return (
-    <PopoverContent  className="w-[320px] p-4 bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200/80 shadow-xl text-gray-800">
+    <PopoverContent  
+      side={side}
+      sideOffset={sideOffset}
+      align={align}
+      onMouseDown={(e) => e.preventDefault()}
+      className="w-[320px] p-4 bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200/80 shadow-xl text-gray-800">
       
       <div className="flex flex-col gap-3.5">
         
@@ -118,11 +184,7 @@ export const ColorPickerPopover = ({ editor, onClose }: ColorPickerPopoverProps 
                     <button
                       key={`${color}-${colIndex}`}
                       type="button"
-                      onClick={() => {
-                        const currentColor = getHexWithOpacity(color, opacity)
-                        setSelectedColor(currentColor) 
-                        editor.chain().focus().setColor(currentColor).run()
-                      }}
+                      onClick={() => applyColor(color, opacity)}
                       style={{ backgroundColor: color }}
                       className="relative w-[24px] h-[21px] cursor-pointer hover:ring-2 hover:ring-white hover:scale-105 hover:z-10 transition-transform "
                     />
@@ -139,40 +201,43 @@ export const ColorPickerPopover = ({ editor, onClose }: ColorPickerPopoverProps 
 
               <div className="flex items-center gap-3">
                 {/* Pasek krycia ze wzorem szachownicy w CSS */}
-                <div className="relative flex-1 h-7 flex  items-center">
-                  
-                    {/* 1. Tło paska (zaokrąglone i przycięte) */}
-                    <div 
-                      className="w-full h-full rounded-full overflow-hidden border border-gray-200 shadow-inner cursor-pointer" 
-                      style={opacityBackground}
-                    />
 
-                    {/* 2. Gałka / Białe kółko */}
-                    <div 
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[25px] h-[25px] rounded-full border-2 border-white shadow-md pointer-events-none "
-                      style={{ 
-                        // Używamy calc, aby kółko nie wychodziło poza krawędzie przy 0% i 100%
-                        left: `calc(15px + (${opacity} / 100) * (100%  - 30px)` 
-                      }}
-                    />
+                
+                  <div 
+                    className="relative flex-1 h-7 flex items-center touch-none" 
+                    ref={trackRef}
+                    onPointerDown={(e) => {
+                      // Przejmij zdarzenia wskaźnika (mysz/dotyk), aby działało przeciąganie poza elementem
+                      e.currentTarget.setPointerCapture(e.pointerId)
+                      handleSliderMove(e.clientX)
+                    }}
+                    onPointerMove={(e) => {
+                      // Aktualizuj tylko jeśli element przechwycił wskaźnik (jest w trakcie przeciągania)
+                      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                        handleSliderMove(e.clientX)
+                      }
+                    }}
+                    onPointerUp={(e) => {
+                      // Zwolnij wskaźnik po puszczeniu klawisza myszy
+                      e.currentTarget.releasePointerCapture(e.pointerId)
+                    }}
+                  >
+                      {/* 1. Tło paska (zaokrąglone i przycięte) */}
+                      <div 
+                        className="w-full h-full rounded-full overflow-hidden border border-gray-200 shadow-inner" 
+                        style={opacityBackground}
+                      />
 
-                    {/* 3. Niewidoczny suwak (przechwytuje przeciąganie) */}
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={opacity}
-                      onChange={(e) => {
-                        setOpacity(Number(e.target.value))
-                        const currentColor = getHexWithOpacity(selectedColor, opacity)
-                        setSelectedColor(currentColor) 
-                        // editor.chain().focus().setColor(selectedColor).run()  
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    />
+                      {/* 2. Gałka / Białe kółko */}
+                      <div 
+                        className="absolute top-1/2 z-3 -translate-y-1/2 -translate-x-1/2 w-[25px] h-[25px] cursor-pointer rounded-full border-2 border-white shadow-md  transition-none"
+                        style={{ 
+                          left: `calc(15px + (${opacity} / 100) * (100% - 30px))` 
+                        }}
+                      />
+                  </div>
 
 
-                </div>
                 {/* Wskaźnik procentowy */}
                 <span className="text-xs font-semibold text-gray-700 w-[45px] text-right bg-gray-100 px-2 py-1 rounded-md border border-gray-200/60">
                   {opacity}%
@@ -215,9 +280,7 @@ export const ColorPickerPopover = ({ editor, onClose }: ColorPickerPopoverProps 
               {presets.map((color, index) => {
                 // Sprawdzamy, czy dany kolor jest aktualnie wybrany
                 const isSelected = selectedColor === getHexWithOpacity(color, opacity);
-                console.log(selectedColor, color);
-                
-                if(isSelected) console.log("test");
+              
                 
 
                 return (

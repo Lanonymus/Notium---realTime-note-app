@@ -13,6 +13,44 @@ body {
     overflow-x: hidden;
 }
 
+/* W globals.css lub pliku ze stylami edytora */
+.FlashcardsLayout img {
+  max-width: 300px !important;
+  max-height: 300px !important;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+.FlashcardsLayout table {
+  max-height: 100px !important;
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(#d1d5db 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+@layer base {
+  :root {
+    /* Twoje inne zmienne... */
+    --chart-1: 220 70% 50%;
+    --chart-2: 217 91% 60%; /* To odcień niebieskiego podobny do tego na zdjęciu */
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+}
+
+
+.tiptap,
+.ProseMirror {
+  font-family: var(--font-Geist), sans-serif !important; /* lub var(--font-Geist), "Inter", itp. */
+}
+
+
 
 /* Styl dla każdego obrazka w edytorze */
 .ProseMirror img {
@@ -63,6 +101,11 @@ div[data-resize-image-ui="position-controller"] {
   background-color: inherit; 
   pointer-events: none;
 }
+
+/* Stylowanie automatycznej owijki Tiptapa */
+
+
+
 
 
 /* Niezawodny styl dla klikniętej/aktywnej komórki */
@@ -120,6 +163,33 @@ div[data-resize-image-ui="position-controller"] {
 }
 
 
+.tiptap mark,
+.tiptap span {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Ustawienie czcionki dla całego edytora */
+
+/* ustawienia globalne edytora — kontrolujesz rozmiar, a listy zachowują domyślny wygląd */
+.HugeText p{
+  font-size: 40px !important;          /* Twój rozmiar */
+  line-height: 1.15;
+  color: #282e3e;
+  max-width: none;
+}
+
+
+
+.HugeText li::marker {
+  font-size: 0.5em !important;
+}
+
+/* upewnij się, że reguły CSS ładowane są po Tailwind/typography, żeby je nadpisać */
+
 
 
 .prose ul li::marker {
@@ -131,7 +201,6 @@ div[data-resize-image-ui="position-controller"] {
   margin-top: 0px !important;
   margin-bottom: 0px !important;
   line-height: 1.5 !important;
-  font-family: Arial, Helvetica, sans-serif;
   font-size: 15px;
 }
 
@@ -351,3 +420,219 @@ div[data-resize-image-ui="position-controller"] {
 .animate-face-down {
   animation: face-down 0.35s ease-out backwards;
 }
+
+
+
+@keyframes from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-from-left {
+  animation: from-left 0.35s ease-out backwards;
+}
+
+
+@keyframes from-right {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-from-right {
+  animation: from-right 0.35s ease-out backwards;
+}
+
+
+@keyframes rotate-hop {
+  0%, 18% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  21% {
+    transform: translateY(-30px) rotate(-65deg);
+  }
+
+  24% {
+    transform: translateY(0) rotate(-90deg);
+  }
+
+  25%, 43% {
+    transform: translateY(0) rotate(-90deg);
+  }
+
+  46% {
+    transform: translateY(-30px) rotate(-155deg);
+  }
+
+  49% {
+    transform: translateY(0) rotate(-180deg);
+  }
+
+  50%, 68% {
+    transform: translateY(0) rotate(-180deg);
+  }
+
+  71% {
+    transform: translateY(-30px) rotate(-245deg);
+  }
+
+  74% {
+    transform: translateY(0) rotate(-270deg);
+  }
+
+  75%, 93% {
+    transform: translateY(0) rotate(-270deg);
+  }
+
+  96% {
+    transform: translateY(-30px) rotate(-335deg);
+  }
+
+  100% {
+    transform: translateY(0) rotate(-360deg);
+  }
+}
+
+.animate-rotate {
+  animation: rotate-hop 10s ease-in-out infinite;
+  transform-origin: center;
+}
+
+
+
+
+@keyframes face-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+.animate-face-up {
+  animation: face-up 0.35s ease-out backwards;
+}
+
+
+@keyframes uprise {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+
+.animate-uprise {
+  animation: uprise 0.15s ease-in-out backwards;
+}
+
+
+
+
+@keyframes fallFromSky {
+  0% {
+    opacity: 0;
+    transform: translateY(-500px) rotate(-6deg) scale(0.85);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(12px) rotate(2deg) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+
+.animate-fall {
+  /* Zmienione z 'forwards' na 'both' */
+  animation: fallFromSky 0.65s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+/* Animacja slide */
+
+@keyframes slideInRight {
+  from { transform: translateX(80px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-80px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+
+
+
+@keyframes slideDownFade {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-stat-drop {
+  opacity: 0; /* Ukryte na start */
+  animation: slideDownFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modernScrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.modernScrollbar::-webkit-scrollbar-track {
+  background-color: #f3f4f6; /* Odpowiednik Tailwind bg-gray-100 */
+}
+
+.modernScrollbar::-webkit-scrollbar-thumb {
+  background-color: #d1d5db; /* Odpowiednik Tailwind bg-gray-300 */
+  border-radius: 4px;
+}
+
+
+
+
+/* Landing page animation */
+
+/* Notium study presentation. Layout and styling remain in Tailwind. */
+@keyframes nt-tour-spin { to { transform: rotate(360deg); } }
+.nt-tour-spinner { animation: nt-tour-spin .8s linear infinite; }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-tour-spinner { animation: none; }
+}
+
+

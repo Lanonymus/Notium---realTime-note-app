@@ -7,6 +7,7 @@ import SafeParseJson from "../validation/SafeParseJson.js";
 import { db } from "../db/db.js";
 import { chats } from "../db/schema.js";
 import { v4 as uuidv4 } from "uuid";
+import { QUICK_ACTION_PROMPTS } from "../prompts/QUICK_ACTION_PROMPTS.js";
 
 dotenv.config()
 
@@ -65,8 +66,9 @@ const GenAi = new GoogleGenerativeAI(API_KEY!)
 
 Router_AI.post("/ask-ai", async (req: Request, res: Response) => {
     try {
-        const { contextContent, userPrompt, type, projectID, messages } = req.body
+        const { contextContent, userPrompt, type, projectID, messages, action } = req.body
         let systemInstruction = ``
+        const quickAction = QUICK_ACTION_PROMPTS[action]
 
         // Szybki i tani model gemini flash 2.5
         const model = GenAi.getGenerativeModel({ model: "gemini-3.1-flash-lite"})
@@ -89,16 +91,6 @@ Router_AI.post("/ask-ai", async (req: Request, res: Response) => {
                 systemInstruction = defaultGeneration
         }
 
-        const fullPrompt = `
-            INSTRUKCJA SYSTEMOWA:
-            ${systemInstruction}
-            
-            KONTEKST Z EDYTORA (JSON lub tekst):
-            ${JSON.stringify(contextContent)}
-            
-            PROŚBA UŻYTKOWNIKA:
-            ${userPrompt}
-        `;
 
 
         // -------------------------------------------------------------
@@ -109,7 +101,7 @@ Router_AI.post("/ask-ai", async (req: Request, res: Response) => {
                 contents: [
                 {
                     role: "user",
-                    parts: [{ text: `Kontekst: ${contextContent || ""}\nPrompt: ${userPrompt}` }],
+                    parts: [{ text: `Kontekst: ${contextContent || ""}\n Prompt: ${userPrompt}` }],
                 },
                 ],
                 systemInstruction: systemInstruction,
@@ -172,7 +164,7 @@ Router_AI.post("/ask-ai", async (req: Request, res: Response) => {
             contents: [
                 {
                 role: "user",
-                parts: [{ text: `Kontekst: ${contextContent || ""}\nPrompt: ${userPrompt}` }],
+                parts: [{ text: `Kontekst: ${contextContent || ""}\nPrompt: ${quickAction ? quickAction : userPrompt}` }],
                 },
             ],
             systemInstruction: systemInstruction,

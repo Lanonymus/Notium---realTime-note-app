@@ -1,0 +1,115 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../vendor/shadcn-tailwind-4.13.0.css";
+
+:root {
+  color-scheme: light;
+  --background: #fff;
+  --foreground: #17181b;
+  --card: #fff;
+  --card-foreground: #17181b;
+  --popover: #fff;
+  --popover-foreground: #17181b;
+  --primary: #155dfc;
+  --primary-foreground: #fff;
+  --secondary: #f4f5f7;
+  --secondary-foreground: #17181b;
+  --muted: #f4f5f7;
+  --muted-foreground: #686b73;
+  --accent: #f0f3f9;
+  --accent-foreground: #17181b;
+  --destructive: #dc2626;
+  --border: #e5e7eb;
+  --input: #d9dce1;
+  --ring: #155dfc;
+  --chart-1: #155dfc;
+  --chart-2: #8297bd;
+  --radius: 1rem;
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --font-sans: "Inter", "Geist", "Helvetica Neue", Arial, sans-serif;
+}
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 112px;
+}
+body {
+  margin: 0;
+  background: #fff;
+  color: #17181b;
+  font-family: var(--font-sans);
+}
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled),
+summary {
+  cursor: pointer;
+}
+::selection {
+  background: #dce8ff;
+}
+@keyframes reviews-left {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.review-track {
+  animation: reviews-left 65s linear infinite;
+}
+.review-track.reverse {
+  animation-direction: reverse;
+  animation-duration: 73s;
+}
+.reviews-paused .review-track,
+.review-window:hover .review-track,
+.review-window:focus-within .review-track {
+  animation-play-state: paused;
+}
+@keyframes bounce-wave {
+  50% {
+    transform: scaleY(0.4);
+  }
+}
+.wave-active rect {
+  animation: bounce-wave 0.9s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

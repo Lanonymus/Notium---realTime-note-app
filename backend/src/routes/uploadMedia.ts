@@ -2,40 +2,41 @@ import express from "express"
 import { supabaseAdmin } from "../db/supabaseAdmin.js"
 import multer from "multer"
 
-const mediaRouter = express.Router()
+
+const uploadMediaRouter = express.Router()
 const upload = multer({ storage: multer.memoryStorage()})
 
-mediaRouter.post("/upload-media", upload.single("file"), async (req, res) => {
+
+uploadMediaRouter.post("/upload-media", upload.single("file"), async (req, res) => {
     try {
         const file = req.file
-        if(!file) return res.status(400).json({ message: "File is required" })
 
-        const fileName = `editor/${Date.now()}_${file.originalname}`
+        const fileName = req.body.fileName
+        const projectID = req.body?.projectID
+
+        if(!file || !fileName || !projectID) return res.status(400).json({ message: "File, file name and projectID is required" })
+
+
+        // Ścieżka w Supabase Storage (np. editor/1787071617087_bartek_1.jpg lub z podfolderem docId)
+        const filePath = `editor/${projectID}/${fileName}` 
 
         const { data, error } = await supabaseAdmin.storage
             .from("Notium_Media")
-            .upload(fileName, file.buffer, {
+            .upload(filePath, file.buffer, {
                 contentType: file.mimetype,
                 upsert: true
             });
 
         if(error) return res.status(500).json({ message: error.message })
 
-        const { data: publicUrlObject } = supabaseAdmin.storage
-            .from("Notium_Media")
-            .getPublicUrl(fileName)
 
-        if(!publicUrlObject) return res.status(500).json({ message: "Failed to get public URL" })   
-
-        const imageUrl = publicUrlObject.publicUrl
-
-        return res.status(200).json({ message: "File uploaded successfully", url: imageUrl  })
+        return res.status(200).json({ message: "File uploaded successfully"})
 
 
     } catch (err) {
-        console.error("Error uploading file: ")
-        return res.status(500).json({ message: `Error uploading file. Please try again later: ${err}` })
-    }
+        console.error("Error uploading file:", err);
+        return res.status(500).json({ message: `Error uploading file: ${err}` });
+}
 })
 
-export default mediaRouter;
+export default uploadMediaRouter;

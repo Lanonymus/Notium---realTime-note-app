@@ -38,6 +38,7 @@ export function useEditorWebSocket({ editor, setTitle, projectID, setRemoteCurso
                 // WAŻNE: Zrób dokładnie to samo zabezpieczenie dla FULL_STATE, 
                 // ponieważ jeśli serwer to wyśle bez uuid, ominie pierwszy if() na górze!
                 if(data.type === "FULL_STATE" && data.editorContent) {
+                    
                     const currentContent = editor.getJSON();
                     if (JSON.stringify(currentContent) === JSON.stringify(data.editorContent)) {
                         return; 
@@ -93,6 +94,8 @@ export function useEditorWebSocket({ editor, setTitle, projectID, setRemoteCurso
 
                 const { from, to } = editor.state.selection;
                 const contentToLoad = Object.keys(data.editorContent).length > 0 ? data.editorContent : "";
+                console.log("kontent: ", contentToLoad);
+                
 
                 editor.chain()
                     .command(({ tr }) => {

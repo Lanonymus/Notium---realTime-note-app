@@ -6,7 +6,7 @@ export const ImageDeleteWatcher = Extension.create({
   // 1. Definiujemy opcje, które rozszerzenie może przyjąć z zewnątrz
   addOptions() {
     return {
-      onImageDelete: (url: string) => {},
+      onImageDelete: (src: string, projectID: string, fileName: string) => {},
     }
   },
 
@@ -30,9 +30,22 @@ export const ImageDeleteWatcher = Extension.create({
         transaction.before.nodesBetween(step.from, step.to, (node: any) => {
           // Jeśli znajdziemy węzeł typu 'image' i ma on źródło (URL)...
           if (node.type.name === 'image' && node.attrs.src) {
+
+            // Dodany warunek sprawdzający czy zdjęcie zostało faktycznie usunięte czy nadal istnieje bo może ktoś po prostu zmienił wielkość
+            const targetFileName = node.attrs.fileName
+
+            let stillExists = false
+            transaction.doc.descendants((newDocNode: any) => {
+              if(newDocNode.type.name === "image" && newDocNode.attrs.fileName === targetFileName) {
+                stillExists = true
+              }
+            })
             
+            // Jeśli zdjęcie nadal istnieje - tylko zostało przeskalowane to nic nie robimy
+            if(stillExists) return
+
             // ...wołamy funkcję, którą przekazałeś w TipTapEditor.tsx!
-            this.options.onImageDelete(node.attrs.src)
+            this.options.onImageDelete(node.attrs.src, node.attrs.docId, node.attrs.fileName)
           }
         })
       }
