@@ -52,7 +52,9 @@ export const CustomHighlight = Mark.create({
     return [
       "mark",
       // 👇 2. MERGE ATTRIBUTES: Łączy podstawowe atrybuty (w tym nasz wygenerowany styl koloru)
-      mergeAttributes(HTMLAttributes),
+      mergeAttributes(HTMLAttributes, {
+        style: `${HTMLAttributes || ""}; color: inherit;`
+      }),
       0
     ]
   },

@@ -1,0 +1,14 @@
+{
+  "title": "Dlaczego zapominamy?",
+  "description": "Krótka rozmowa o pamięci i powtórkach.",
+  "chapters": [
+    {
+      "title": "Uczenie się przez przypominanie",
+      "description": "Jak sprawdzić, co naprawdę pamiętasz.",
+      "utterances": [
+        {"speakerId": "Orus", "text": "Czy zdarzyło ci się przeczytać notatki i chwilę później nie pamiętać ich treści?"},
+        {"speakerId": "Sulafat", "text": "Spróbuj zamknąć notatki i wyjaśnić temat własnymi słowami. Wtedy łatwiej zauważysz, do czego warto wrócić."}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "flashcards" jsonb DEFAULT '[]'::jsonb;

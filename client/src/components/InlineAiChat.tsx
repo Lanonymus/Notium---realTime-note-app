@@ -37,10 +37,20 @@ type InlineAiChatProps = {
     showInlineAiBubble: boolean,
     openInlineAiBubble: () => void,
     closeInlineAiBubble: () => void,
-    newContext: RefObject<string>
+    newContext: RefObject<string>,
+    action: string | null
 }
 
-export default function InlineAiChat({ editor, aiContextText, userSelectedContent, showInlineAiBubble, openInlineAiBubble, closeInlineAiBubble, newContext } : InlineAiChatProps ) {
+export default function InlineAiChat({ 
+    editor, 
+    aiContextText, 
+    userSelectedContent, 
+    showInlineAiBubble, 
+    openInlineAiBubble, 
+    closeInlineAiBubble, 
+    newContext, 
+    action
+} : InlineAiChatProps ) {
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
     const [userPrompt , setUserPrompt] = useState<string>("")
     const [isAiThinking, setIsAiThinking] = useState<boolean>(false)
@@ -107,6 +117,7 @@ export default function InlineAiChat({ editor, aiContextText, userSelectedConten
     }, [showInlineAiBubble])
 
 
+    // <--------------------FUNKCJA DO GENEROWANIE KONTENTU W EDYTORZE---------------------->
     const handleGenerateContent = async (isRetry = false) => {
 
         console.log("🖊️ GENEROWANIE KONTENTU");
@@ -119,6 +130,7 @@ export default function InlineAiChat({ editor, aiContextText, userSelectedConten
             return
         }
 
+
         if(!isRetry) {
             lastUsedPrompt.current = userPrompt
         }
@@ -127,8 +139,8 @@ export default function InlineAiChat({ editor, aiContextText, userSelectedConten
         console.log("oto prompt zapisany: ", promptToUse);
         
 
-
-        if (!promptToUse.trim()) return; // Zabezpieczenie przed pustym tekstem
+        // Zabezpieczenie przed pustym tekstem i akcją nullem bo wtedy oznacza że użytkownik nic wsumie nie chce generować
+        if (!promptToUse.trim() && !action) return; 
 
 
         // przyszłe id dla wiadomości bota
@@ -166,6 +178,8 @@ export default function InlineAiChat({ editor, aiContextText, userSelectedConten
             const fetchContext = newContext.current.trim() ? newContext.current.trim() : aiContextText
             console.log("kontekst z poziomu inline ai chatu: ", fetchContext);
             
+
+            // Przesyłane informacje na serwer i do api chata potem
             const response = await fetch("http://localhost:8000/api/ask-ai", {
                 method: "POST",
                 headers: {
@@ -176,7 +190,8 @@ export default function InlineAiChat({ editor, aiContextText, userSelectedConten
                 body: JSON.stringify({
                     userPrompt: promptToUse,
                     contextContent: fetchContext || "no context provided",
-                    type: "GENERATE_INLINE_CONTENT"
+                    type: "GENERATE_INLINE_CONTENT",
+                    action: action || null
                 })
             });
 
@@ -257,10 +272,14 @@ export default function InlineAiChat({ editor, aiContextText, userSelectedConten
             abortControllerRef.current = null
         }
     };
-
-
     
         useEffect(() => {
+
+            if(action) {
+                handleGenerateContent(false)
+            }
+
+
             // Dajemy Tiptapowi ułamek sekundy na zakończenie operacji na BubbleMenu...
             const timer = setTimeout(() => {
                 if (inlineInputRef.current) {
@@ -271,9 +290,11 @@ export default function InlineAiChat({ editor, aiContextText, userSelectedConten
             return () => clearTimeout(timer);
         }, []);
 
+
+
     return (
         <>     
-        {showInlineAiBubble && (
+        {showInlineAiBubble && action === null && (
             <>
                 {/* Okno Inputu (Chatbox) */}
                 <div 

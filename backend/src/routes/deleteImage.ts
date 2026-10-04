@@ -1,47 +1,40 @@
 import express from "express"
 import { supabaseAdmin } from "../db/supabaseAdmin.js"
 
-
 const deleteImgRouter = express.Router()
-
 
 deleteImgRouter.delete("/delete-image", async (req, res) => {
     try {
-        const imgUrl = decodeURIComponent(req.body.url)
-        console.log("Image URL to delete: ", imgUrl)
+        // Zmieniliśmy nazwę z imgUrl na filePath, bo frontend wysyła np. "editor/123/plik.jpg"
+        const filePath = decodeURIComponent(req.body.url)
+        console.log("File path to delete: ", filePath)
 
-        if(!imgUrl) return res.status(400).json({ 
-            message: "URL is required",
+        if(!filePath) return res.status(400).json({ 
+            message: "File path is required",
             success: false 
        })
 
         const bucketName = "Notium_Media"
-
-        const urlDelimitier = `/storage/v1/object/public/${bucketName}/`
-        const filePath = imgUrl.split(urlDelimitier)[1]
-        if(!filePath) return res.status(400).json({
-            message: "Invalid image URL",
-            success: false
-        })
-
-        const { data, error} = await supabaseAdmin.storage
+        
+        // Supabase .remove() przyjmuje tablicę ścieżek
+        const { data, error } = await supabaseAdmin.storage
             .from(bucketName)
             .remove([filePath])
 
         if(error) {
-            console.error("Error in removing file from storage", data)
+            // Poprawiono: logujemy obiekt `error`, a nie `data`
+            console.error("Error in removing file from storage", error)
             return res.status(500).json({ 
-                message: "Critial problem on the side of supabase",
+                message: "Critical problem on the side of supabase",
                 success: false
             })
         }
         
-        console.log("Succesfuly deleted image from database: ", data);
+        console.log("Successfully deleted image from database: ", data);
         return res.status(200).json({ 
             message: "Image deleted successfully",
             success: true,
         })
-
 
     } catch (error) {
         console.error("Error in deleting image:", error)
@@ -51,6 +44,5 @@ deleteImgRouter.delete("/delete-image", async (req, res) => {
         })
     }
 })
-
 
 export default deleteImgRouter;

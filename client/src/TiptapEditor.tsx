@@ -1,27 +1,22 @@
 import Color from "@tiptap/extension-color"
-import { useEditor, EditorContent, Editor } from '@tiptap/react'
+import { useEditor, EditorContent, Editor, useEditorState } from '@tiptap/react'
 import { BubbleMenu } from "@tiptap/react/menus"
 import StarterKit from '@tiptap/starter-kit'
 import { TextStyle } from '@tiptap/extension-text-style';
-// import Image from "@tiptap/extension-image"
-import imageResize from "tiptap-extension-resize-image"
 import { useEffect, useRef, useState } from "react";
 import Placeholder from "@tiptap/extension-placeholder";
 import { ImageDeleteWatcher } from "./extensions/ImageDeleteWatcher";
 import TextAlign from "@tiptap/extension-text-align"
-import setImageAlignment from "./ImagePositioning";
 import { CustomRemoteCursors } from "./extensions/CustomRemoteCursors";
 import { CustomHighlight } from "./extensions/CustomHighlight";
 import ToolBar from "./components/Toolbar/ToolBar";
 import { useEditorWebSocket } from "./hooks/useEditorWebSocket";
-import BubbleMenuText from "./components/BubbleMenuText";
+import BubbleMenuText from "./components/BubbleMenuText/BubbleMenuText";
 import { KeyBoardShortcuts } from "./extensions/KeyBoardShortcuts";
 import { Link } from "@tiptap/extension-link"
 import { TableRow } from "@tiptap/extension-table-row"
-import AdvancedTableControls from "./components/AdvancedTableControls";
+import AdvancedTableControls from "./components/Table/AdvancedTableControls";
 import { Focus } from "@tiptap/extension-focus"
-import { CustomTableCell, CustomTableHeader } from "./extensions/CustomTableCellBgColor";
-import { Table, TableHeader } from "@tiptap/extension-table"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import Chat from "./components/Chat";
 import InlineAiChat from "./components/InlineAiChat";
@@ -37,6 +32,14 @@ import { FontSize } from "./extensions/FontSize";
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { useParams} from "react-router-dom"
+import { CustomImage } from "./extensions/CustomImage";
+import { getMediaUrl } from "./components/GetMediaUrl";
+import ImageBubbleMenu from "./components/ImageBubbleMenu";
+import { CustomTable } from "./extensions/CustomTable";
+import { TableExtensions } from "./extensions/TableExtensions";
+import { useLearningActivity } from "./hooks/useLearningActivity";
+
+
 type CursorData = {
   from: number,
   to: number,
@@ -53,14 +56,28 @@ type AiContextRange = {
 function TipTapEditor() {
   const params = useParams() 
   const projectID: string | undefined = params.projectID
+
+  // Notes start tracking immediately after entering the project tab.
+  useLearningActivity({
+    enabled: Boolean(projectID),
+    activityType: "notes",
+    projectId: projectID,
+    resourceId: projectID,
+  });
+
   const lastCursorSendTime = useRef<number>(0)
   const cursorTimeOutLastUpdate = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [remoteCursors, setRemoteCursors] = useState<Record<string, CursorData>>({})  
-  const [title, setTitle] = useState<string>("")
-  const [aiContextRange, setAiContextRange] = useState<AiContextRange | null>(null)
+  const [title, setTitle] = useState<string>("")  
+
+  // Zapytania do AI
   const [aiContextText, setAiContextText] = useState<string>("")
+  const [aiContextRange, setAiContextRange] = useState<AiContextRange | null>(null)
+  const [action, setAction] = useState<string | null>(null)
+
   const [userSelectedContent, setUserSelectedContent] = useState<Slice | null>(null)
   const [showInlineAiBubble, setShowInlineAiBubble] = useState<boolean>(false)
+  const [showHighlighterPicker, setShowHighlighterPicker] = useState<boolean>(false)
   const newContext = useRef<string>("")
   const [aiChatContext, setAiChatContext] = useState<string>("No context provided")
   const aiChatPanelRef = useRef<PanelImperativeHandle | null>(null)
@@ -68,9 +85,8 @@ function TipTapEditor() {
   const panelSizes = useRef({ editor: 65, ai: 35 });
   const [ isEditorMaximized, setIsEditorMaximized ] = useState(false)
   const [ isAiChatMaximized, setIsAiChatMaximized ] = useState(false)
-  const titleTimeoutLastUpdate = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastTitleSendTime = useRef<number>(0)
-  const editorTitleRef = useRef<HTMLInputElement | null>(null)
+
+
 
   const editor = useEditor({
     extensions: [
@@ -81,6 +97,8 @@ function TipTapEditor() {
           }
         }
       }),
+      ...TableExtensions,
+      CustomImage,
       CustomHighlight,
       TextStyle,
       FontFamily,
@@ -103,10 +121,6 @@ function TipTapEditor() {
           class: 'text-blue-600 underline decoration-blue-500 hover:text-blue-800 transition-colors cursor-pointer',
         }
       }),
-      imageResize.configure({
-        inline: true, //
-        allowBase64: false // chcemy tylko linki 
-      }),
       Placeholder.configure({
         placeholder: "„Naciśnij '/' aby dodać nagłówek, obraz, tabelę lub wywołać AI...”",
         includeChildren: true,
@@ -115,8 +129,23 @@ function TipTapEditor() {
         cursors: remoteCursors
       }),
       ImageDeleteWatcher.configure({
-        onImageDelete: async (url: string) => {
-          console.log("📷 Wbudowany system wykrył usunięcie zdjęcia! URL:", url);
+        onImageDelete: async (src: string, projectID: string, fileName: string) => {
+
+          if(src.startsWith("blob:")) {
+            console.log("Usunięcie zdjęcia placeholdera z blob:")
+            return
+          }
+          
+          if(!projectID || !fileName) {
+            console.log("Nie można usunąć zdjęcia bez projectID lub fileName");
+            return;
+          }
+
+          const url = `editor/${projectID}/${fileName}`
+
+          console.log(`📷 Wbudowany system wykrył usunięcie zdjęcia! URL: ${url}`);
+
+
           try {
             const response = await fetch("http://localhost:8000/api/delete-image", {
               method: "DELETE",
@@ -133,25 +162,6 @@ function TipTapEditor() {
           }
         }
       }),
-
-      // Tabela
-      Table.configure({
-        resizable: true,
-        HTMLAttributes: {
-          class: 'border-separate border-spacing-0 table-auto w-full my-4', // bazowe klasy Tailwinda dla tabeli
-        },
-      }),
-      TableRow,
-      CustomTableCell.configure({
-        HTMLAttributes: {
-          class: 'border border-gray-300 p-2 min-w-[50px] relative hover:ring-2 hover:ring-inset hover:ring-blue-500 transition-shadow cursor-pointer',
-        }
-      }),
-      CustomTableHeader.configure({
-        HTMLAttributes: {
-          class: 'bg-gray-100 font-bold border border-gray-300 p-2 text-left relative hover:ring-2 hover:ring-inset hover:ring-blue-500 transition-shadow cursor-pointer',
-        },
-      })
     ],
     editorProps: {
       attributes: {
@@ -162,7 +172,7 @@ function TipTapEditor() {
     onUpdate: ({ editor }) => {
       const dataJSON = editor.getJSON();
       // console.log("Editor content: ", dataJSON);
-
+      
         
         sendPayLoad({
           type: "UPDATE_DOC",
@@ -223,35 +233,124 @@ function TipTapEditor() {
     // }
   })
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if(!file) {
-      console.log("No file provided");
-      return
+
+  const handleImageUpload = async (file: File) => {
+    if (!file || !editor || !projectID) {
+      console.log("No file provided, editor not ready or missing projectID");
+      return;
     }
+
+    // 1. Czysta nazwa pliku bez prefiksów katalogu
+    const fileName = `${Date.now()}_${file.name}`;
+    const tempUrl = URL.createObjectURL(file);
+    
+
+    // 2. Wstawienie placeholderu z atrybutami docId i fileName
+    editor
+      .chain()
+      .focus()
+      .setImage({
+        src: tempUrl,
+        isUploading: true,
+        progress: 0,
+        docId: projectID,
+        fileName: fileName
+      } as any)
+      .run();
+
+    let nodePos: number | null = null;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === "image" && node.attrs.src === tempUrl) {
+        nodePos = pos;
+        return false;
+      }
+    });
+
     const formData = new FormData();
+    // 1. Najpierw pola tekstowe
+    formData.append('fileName', fileName);
+    formData.append('projectID', projectID);
+    // 2. Na końcu plik
     formData.append('file', file);
 
-    try {
-      const response = await fetch("http://localhost:8000/api/upload-media", {
-        method: "POST",
-        body: formData
-      })
-      if(!response.ok) {
-        console.log("Error during sending an image")
+
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'http://localhost:8000/api/upload-media', true);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && nodePos !== null) {
+        const percentComplete = (event.loaded / event.total) * 100;
+
+        editor.state.doc.descendants((node, pos) => {
+          if (node.type.name === "image" && node.attrs.src === tempUrl) {
+            editor.commands.command(({ tr }) => {
+              tr.setNodeMarkup(pos, undefined, {
+                ...node.attrs,
+                progress: percentComplete
+              });
+              return true;
+            });
+            return false;
+          }
+        });
       }
+    };
 
-      const data = await response.json()
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
 
-      if(data.url) {
-        editor?.chain().focus().setImage({ src: data.url}).run()
+          // Używamy adresu zwróconego z backendu lub wygenerowanego z helpera
+          const finalMediaUrl = getMediaUrl(projectID, fileName);
+
+          editor.state.doc.descendants((node, pos) => {
+            if (node.type.name === "image" && node.attrs.src === tempUrl) {
+              editor.commands.command(({ tr }) => {
+                tr.setNodeMarkup(pos, undefined, {
+                  ...node.attrs,
+                  src: finalMediaUrl,
+                  isUploading: false,
+                  progress: 100
+                });
+                return true;
+              });
+              return false;
+            }
+          });
+        } catch (e) {
+          console.error("Błąd podczas parsowania odpowiedzi serwera:", e);
+        } finally {
+          URL.revokeObjectURL(tempUrl);
+        }
+      } else {
+        console.error("Błąd podczas wysyłania obrazu:", xhr.statusText);
+        removeTempImage(tempUrl);
+        URL.revokeObjectURL(tempUrl);
       }
+    };
 
-    } catch (err) {
-      console.error("Error during sending an image")
+    xhr.onerror = () => {
+      console.error("Error during sending an image");
+      removeTempImage(tempUrl);
+      URL.revokeObjectURL(tempUrl);
+    };
+
+    xhr.send(formData);
+
+    function removeTempImage(targetUrl: string) {
+      editor?.state.doc.descendants((node, pos) => {
+        // Poprawiono: node.attrs.src zamiast node.attrs.str
+        if (node.type.name === "image" && node.attrs.src === targetUrl) {
+          editor.commands.deleteRange({ from: pos, to: pos + node.nodeSize });
+          return false;
+        }
+      });
     }
+  };
 
-  }
+
+
 
 
 
@@ -297,6 +396,9 @@ function TipTapEditor() {
   useEffect(() => {
     if(editor && !editor.isDestroyed) {
 
+      // jeżeli jest akcja jakaś to nie chcemy zaznaczać tekstu żeby utrzymać zaznaczaenie
+      if(action) return
+
       if(showInlineAiBubble && aiContextRange) {
         editor.chain().focus()
           .setTextSelection(aiContextRange)
@@ -320,7 +422,7 @@ function TipTapEditor() {
         editor.commands.setMeta('sharedAiMenu', 'updatePosition')
       }, 0)
     }
-  }, [showInlineAiBubble, editor])
+  }, [showInlineAiBubble, editor, action])
 
 
 
@@ -334,6 +436,7 @@ function TipTapEditor() {
         setAiContextRange(null);
         setAiContextText("");
         setUserSelectedContent(null)
+        setAction(null)
         newContext.current = ""
       };
 
@@ -380,6 +483,8 @@ function TipTapEditor() {
   <>
 
     
+
+    {/* <-----------TEXT BUBBLE MENU-----------> */}
     {editor && (
       <BubbleMenu
         className="z-3"
@@ -392,11 +497,16 @@ function TipTapEditor() {
         pluginKey="sharedAiMenu"
         // pluginKey={}
         shouldShow={({ editor }) => {
+          if(editor.isActive('image')) return false
           // wymuszamy pokazanie jeśli generujemy odpowiedź od ai bo wtedy zaznaczenie się traci
           if(showInlineAiBubble) return true
+          if(!editor.state.selection.empty) return true
+          // if(showHighlighterPicker) return true
 
           // Bąbelek w ogóle się pokazuje tylko wtedy, gdy jest zaznaczony jakiś tekst
-          return !editor.state.selection.empty;
+          // return !editor.state.selection.empty;
+          return showHighlighterPicker
+
         }}
       >
         {/* REAKCYJNE PRZEŁĄCZANIE ZAWARTOŚCI */}
@@ -405,19 +515,31 @@ function TipTapEditor() {
           // --- TRYB A: Zwykłe menu formatowania tekstu ---
           <BubbleMenuText 
             editor={editor} 
-            onGenerateWithAiClick={() => {
+            onOpenHighlighterPicker={() => {
+              setShowHighlighterPicker(true)
+              console.log('true');
+              
+            }}
+            onCloseHighlighterPicker={() => {
+              setShowHighlighterPicker(false)
+              console.log('false');
+              
+            }}
+            onGenerateWithAiClick={(action: string | null) => {
               const { from, to } = editor.state.selection
               const contextText = editor.state.doc.textBetween(from, to)
               const slice = editor.state.doc.slice(from, to)
-              console.log('kontekst: ', slice);
+              console.log('context: ', slice);
+              console.log('action:', action);
               
-
+              
               setAiContextText(contextText)
               setUserSelectedContent(slice)
 
               setAiContextRange({ from, to })
               
               setShowInlineAiBubble(true)
+              setAction(action)
             }} 
             onAskAiClick={() => {
               console.log("kliknięto pytanie do ai");
@@ -488,97 +610,34 @@ function TipTapEditor() {
               setShowInlineAiBubble(true)
             }}
             newContext={newContext}
+            action={action}
           />
 
         )}
       </BubbleMenu>
     )}
-
-
-  {editor && (
-    <BubbleMenu
-      editor={editor}
-      // options={{ duration: 100, animation: "fade"}}
-      shouldShow={({ editor }) => editor.isActive('imageResize')}
-    >
-      <div className="flex items-center gap-x-1 bg-white p-1.5 rounded-lg shadow-lg border border-gray-200">
-        <button
-          onClick={() => setImageAlignment('left', editor)}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
-            editor.isActive('imageResize', { class: 'float-left mr-4 mb-2 clear-none' }) 
-              ? 'bg-emerald-100 text-emerald-700 font-semibold' 
-              : 'hover:bg-gray-100'
-          }`}
-        >
-          Left
-        </button>
-        
-        <button
-          onClick={() => setImageAlignment('center', editor)}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
-            editor.isActive('imageResize', { class: 'block mx-auto clear-both my-4' }) 
-              ? 'bg-emerald-100 text-emerald-700 font-semibold' 
-              : 'hover:bg-gray-100'
-          }`}
-        >
-          Center
-        </button>
-        
-        <button
-          onClick={() => setImageAlignment('right', editor)}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
-            editor.isActive('imageResize', { class: 'float-right ml-4 mb-2 clear-none' }) 
-              ? 'bg-emerald-100 text-emerald-700 font-semibold' 
-              : 'hover:bg-gray-100'
-          }`}
-        >
-          Right
-        </button>
-      </div>
-    </BubbleMenu>
-  )}
     
 
+
+    {editor && (<ImageBubbleMenu editor={editor} />)}
+    
+
+
 {/* 1. GŁÓWNY KONTENER*/}
-  <div className="h-screen w-screen flex flex-col bg-white overflow-hidden relative">
+  <div className="h-screen w-full flex flex-col bg-white overflow-hidden relative">
 
 
     {/* 2. TOOLBAR: shrink-0 sprawia, że pasek trzyma swój wymiar */}
     <div className="shrink-0">
-      <ToolBar editor={editor} handleImageUpload={handleImageUpload}/>
+      <ToolBar editor={editor} sendPayLoad={sendPayLoad} setTitle={setTitle} isContentLoaded={isContentLoaded} title={title} uuid={uuidRef.current} handleImageUpload={handleImageUpload}/>
     </div>
 
     {/* 3. KONTENER GŁÓWNY: Zamiast h-full dajemy flex-1 min-h-0 oraz opcjonalny padding p-4 */}
     <div className="flex-1 min-h-0 w-full flex flex-col items-center bg-white pb-5 pt-3">
       
       {/* Obszar roboczy */}
-      <div className="w-[90%] h-full flex flex-col">
+      <div className="w-full px-7 h-full flex flex-col">
 
-        {/* TYTUŁ: shrink-0 zapobiega zmniejszaniu inputu */}
-        {!isContentLoaded ? (
-            <div className="flex w-full max-w-[50%] flex-col gap-2 py-2 mb-2 shrink-0">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-            </div>        
-        ) : (
-          <input 
-            type="text" 
-            ref={editorTitleRef}
-            onChange={(e) => {
-              setTitle(e.target.value)
-              const updateTitle = () => sendPayLoad({
-                type: "UPDATE_TITLE",
-                uuid: uuidRef.current,
-                editorTitle: e.target.value 
-              })
-              updateTitle()
-            }} 
-            value={title} 
-            placeholder="Project Title" 
-            className="text-3xl placeholder-gray-300 placeholder:font-medium font-bold py-2 mb-2 shrink-0
-              outline-transparent focus:outline-2 focus:outline-dashed focus:outline-gray-300 w-full"
-          />
-        )}
             
         {/* 4. KONTENER EDYTOR + AI: flex-1 min-h-0 idealnie wypełnia resztę ekranu */}
         <div className="flex-1 min-h-0 w-full relative">
@@ -615,18 +674,82 @@ function TipTapEditor() {
               }} 
               className="flex flex-col bg-white"
             >
-              {!isContentLoaded ? (
-                  <div className="flex border-1 border-gray-200 rounded-[6px] w-full h-full items-center justify-center">
-                    <div className="flex flex-col items-center gap-4">
-                          <Button variant="outline" disabled size="sm">
-                            <Spinner data-icon="inline-start" />
-                            Loading...
-                          </Button>
-                      </div>                   
-                  </div>              
+              {!isContentLoaded ? (   
+                <div className="pt-8 flex w-full h-full flex-col gap-8 pb-10">
+                  
+                  {/* 1. PIERWSZY AKAPIT (Wstęp) */}
+                  <div className="flex flex-col gap-2.5">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[90%]" />
+                    <Skeleton className="h-4 w-[60%]" />
+                  </div>
+
+                  {/* 2. SEKCJA Z NAGŁÓWKIEM I LISTĄ */}
+                  <div className="flex flex-col gap-4 mt-2">
+                    {/* Nagłówek (H2/H3 - grubszy i krótszy) */}
+                    <Skeleton className="h-6 w-[35%]" /> 
+                    
+                    <div className="flex flex-col gap-2.5">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-[85%]" />
+                    </div>
+
+                    {/* Imitacja listy punktowanej */}
+                    <div className="flex flex-col gap-3 mt-1 ml-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                        <Skeleton className="h-4 w-[70%]" />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                        <Skeleton className="h-4 w-[85%]" />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                        <Skeleton className="h-4 w-[50%]" />
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* 5. ZAKOŃCZENIE (Krótki akapit) */}
+                  <div className="flex flex-col gap-2.5 mt-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[75%]" />
+                  </div>
+
+                  {/* 1. PIERWSZY AKAPIT (Wstęp) */}
+                  <div className="flex flex-col gap-2.5">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[90%]" />
+                    <Skeleton className="h-4 w-[60%]" />
+                  </div>      
+
+                  <div className="flex flex-col gap-3 mt-1 ml-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                      <Skeleton className="h-4 w-[70%]" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                      <Skeleton className="h-4 w-[85%]" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                      <Skeleton className="h-4 w-[50%]" />
+                    </div>
+                  </div>    
+
+                  {/* Nagłówek (H2/H3 - grubszy i krótszy) */}
+                  <Skeleton className="h-8 w-[35%]" /> 
+                                                           
+
+                </div>      
               ) : (
                 <div className={`relative prose prose-slate max-w-none w-full overflow-y-auto flex-1
-                  prose-markers:text-slate-900 border border-gray-200 rounded-[6px] py-2 px-10 
+                  prose-markers:text-slate-900 rounded-[1px] py-2 pl-[0px] pr-[40px]
                   
                   selection:bg-blue-500/30 selection:text-inherit
                   [&_.tiptap]:selection:bg-blue-500/30
@@ -637,8 +760,13 @@ function TipTapEditor() {
                   [&::-webkit-scrollbar-thumb]:bg-gray-300
                   [&::-webkit-scrollbar-thumb]:rounded-[4px]
                 `}>
-                  {editor && <AdvancedTableControls editor={editor} />}
-                  <EditorContent editor={editor} />
+                  {editor && <AdvancedTableControls 
+                    editor={editor} 
+                    onAskNotium={(tableContent: string) => {
+                      setAiChatContext(tableContent)
+                    }}
+                  />}
+                    <EditorContent editor={editor}  />
                 </div>
               )}
             </ResizablePanel>

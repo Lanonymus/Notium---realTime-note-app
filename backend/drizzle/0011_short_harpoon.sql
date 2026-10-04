@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "podcasts" jsonb DEFAULT '[]'::jsonb;

@@ -12,12 +12,12 @@ const JoinRoom = () => {
                 method: "POST",
                 credentials: "include", // Kluczowe do przekazania i odbioru ciasteczek!
                 headers: {
-                "Content-Type": "application/json",
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                username: "test_username2226723",
-                email: "test_email1@gmail.com",
-                password: "test_password",
+                    username: "test_user23",
+                    email: "test_e2222@gmail.com",
+                    password: "test_passwo22r222d213",
                 }),
             });
 
